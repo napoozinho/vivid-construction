@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
-    "prettier": "prettier --write . vite build"
+    "prettier": "prettier --write . && vite build"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
