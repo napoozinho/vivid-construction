@@ -2,7 +2,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 
-import { duration, staggerAmount, customEaseName } from "../utils/variables.js";
+import { duration, staggerAmount, easePrimary } from "../utils/variables.js";
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
@@ -55,7 +55,7 @@ document.fonts.ready.then(() => {
     tl.from(lines, {
       yPercent: 100,
       duration,
-      ease: customEaseName,
+      ease: easePrimary,
       stagger: { amount: staggerAmount },
       delay,
     });

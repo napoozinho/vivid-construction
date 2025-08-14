@@ -1,9 +1,6 @@
 import gsap from "gsap";
 import { SplitText } from "gsap/SplitText";
-import { CustomEase } from "gsap/CustomEase";
-import { duration, staggerAmount, customEaseName } from "../utils/variables.js";
-
-gsap.registerPlugin(SplitText, CustomEase);
+import { duration, staggerAmount, easePrimary } from "../utils/variables.js";
 
 (() => {
   const component = document.querySelector("[data-component='home-hero']");
@@ -26,7 +23,7 @@ gsap.registerPlugin(SplitText, CustomEase);
   gsap.fromTo(
     logo,
     { clipPath: "inset(0% 100% 0% 0%)" },
-    { clipPath: "inset(0% 0% 0% 0%)", duration: 1, ease: customEaseName },
+    { clipPath: "inset(0% 0% 0% 0%)", duration: 1 },
   );
 
   // Animate number and bar in sync
@@ -83,7 +80,7 @@ gsap.registerPlugin(SplitText, CustomEase);
       gsap.timeline({ delay: i * 0.3 }).from(lines, {
         yPercent: 100,
         duration,
-        ease: customEaseName,
+        ease: easePrimary,
         stagger: { amount: staggerAmount },
       });
     });
