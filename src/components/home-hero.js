@@ -6,6 +6,14 @@ import { duration, staggerAmount, easePrimary } from "../utils/variables.js";
   const component = document.querySelector("[data-component='home-hero']");
   if (!component) return;
 
+  // scroll to top
+  const body = document.body;
+  window.addEventListener("load", () => {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
+  });
+
   const curtain = component.querySelector("[data-home-hero='curtain']");
   const logo = component.querySelector("[data-home-hero='logo']");
   const number = component.querySelector("[data-home-hero='number']");
