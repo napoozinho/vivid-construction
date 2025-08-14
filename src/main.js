@@ -1,5 +1,3 @@
-import "swiper/css";
-
 import "./components/split-text.js";
 import "./components/image-reveal.js";
 import "./components/button.js";
