@@ -7,12 +7,12 @@ import { duration, staggerAmount, easePrimary } from "../utils/variables.js";
   if (!component) return;
 
   // scroll to top
-  const body = document.body;
-  window.addEventListener("load", () => {
-    requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
-    });
-  });
+  // const body = document.body;
+  // window.addEventListener("load", () => {
+  //   requestAnimationFrame(() => {
+  //     window.scrollTo(0, 0);
+  //   });
+  // });
 
   const curtain = component.querySelector("[data-home-hero='curtain']");
   const logo = component.querySelector("[data-home-hero='logo']");
