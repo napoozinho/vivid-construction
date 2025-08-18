@@ -61,9 +61,11 @@ document.fonts.ready.then(() => {
     });
 
     ScrollTrigger.create({
+      animation: tl,
       trigger: textElement,
       start: "0% 100%",
-      onEnter: () => tl.play(),
+      toggleActions: "play none none reset",
+      markers: true,
     });
   });
 });
