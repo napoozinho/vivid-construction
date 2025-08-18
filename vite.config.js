@@ -10,7 +10,7 @@ export default defineConfig({
         assetFileNames: "bundle.css",
       },
     },
-    minify: true,
+    minify: false,
     cssCodeSplit: true,
   },
 });
