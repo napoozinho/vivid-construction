@@ -12,7 +12,7 @@ gsap.registerPlugin(ScrollTrigger);
   const projectsAmmount = projects.length;
   const windowHeight = window.innerHeight;
 
-  gsap.set(component, { height: `${projectsAmmount * 100}vh` });
+  gsap.set(component, { height: `${projectsAmmount * 100}dvh` });
 
   projects.forEach((project, i) => {
     const projectOffsetY = (i - 1) * windowHeight;

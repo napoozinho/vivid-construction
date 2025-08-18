@@ -7982,7 +7982,7 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
   const projects = component.querySelectorAll("[data-projects-mask='item']");
   const projectsAmmount = projects.length;
   const windowHeight = window.innerHeight;
-  gsapWithCSS.set(component, { height: `${projectsAmmount * 100}vh` });
+  gsapWithCSS.set(component, { height: `${projectsAmmount * 100}dvh` });
   projects.forEach((project, i) => {
     const projectOffsetY = (i - 1) * windowHeight;
     gsapWithCSS.set(project, { zIndex: i + 1 });
