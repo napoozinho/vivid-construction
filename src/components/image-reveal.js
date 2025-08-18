@@ -15,6 +15,7 @@ import { easeSecondary } from "../utils/variables.js";
       scrollTrigger: {
         trigger: wrapper,
         start: "top 90%",
+        //fix this
         toggleActions: "play none none reset",
       },
     });
