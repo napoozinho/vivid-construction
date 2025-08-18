@@ -1,18 +1,18 @@
 import gsap from "gsap";
-import { SplitText } from "gsap/SplitText";
+import { lenis } from "./lenis.js";
 import { duration, staggerAmount, easePrimary } from "../utils/variables.js";
 
 (() => {
   const component = document.querySelector("[data-component='home-hero']");
   if (!component) return;
 
-  // scroll to top
-  // const body = document.body;
-  // window.addEventListener("load", () => {
-  //   requestAnimationFrame(() => {
-  //     window.scrollTo(0, 0);
-  //   });
-  // });
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+
+  setTimeout(() => {
+    lenis.scrollTo(0, { duration: 0.01, force: true });
+  }, 100);
 
   const curtain = component.querySelector("[data-home-hero='curtain']");
   const logo = component.querySelector("[data-home-hero='logo']");
