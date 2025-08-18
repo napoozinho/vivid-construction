@@ -26,7 +26,7 @@ gsap.registerPlugin(ScrollTrigger);
         },
         {
           clipPath: "inset(0% 0% 0% 0%)",
-          ease: "power1.inOut",
+          ease: "none",
           scrollTrigger: {
             trigger: project,
             start: `bottom+=${projectOffsetY} bottom`,
