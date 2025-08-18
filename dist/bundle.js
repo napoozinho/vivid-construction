@@ -7815,6 +7815,9 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
   }, 100);
   function animateNavbar(elements) {
     let delay = 0;
+    if (window.location.pathname === "/") {
+      delay = 3.5;
+    }
     gsapWithCSS.set(navbar, { autoAlpha: 1 });
     gsapWithCSS.set(elements, {
       y: "-5rem"

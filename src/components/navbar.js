@@ -62,7 +62,7 @@ gsap.registerPlugin(ScrollTrigger);
   function animateNavbar(elements) {
     let delay = 0;
     if (window.location.pathname === "/") {
-      // delay = 3.5;
+      delay = 3.5;
     }
     gsap.set(navbar, { autoAlpha: 1 });
     gsap.set(elements, {
