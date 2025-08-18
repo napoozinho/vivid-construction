@@ -65,7 +65,6 @@ document.fonts.ready.then(() => {
       trigger: textElement,
       start: "0% 100%",
       toggleActions: "play none none reset",
-      markers: true,
     });
   });
 });
