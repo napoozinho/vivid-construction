@@ -1,4 +1,5 @@
 import gsap from "gsap";
+import { lenis } from "./lenis";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { easeSecondary } from "../utils/variables";
 
@@ -11,7 +12,7 @@ gsap.registerPlugin(ScrollTrigger);
   const logo = navbar.querySelector("[data-navbar='logo-link']");
   const menu = navbar.querySelector("[data-navbar='menu']").children;
   const button = navbar.querySelector(".navbar-button_component");
-  const menuButton = navbar.querySelector(
+  const menuButtonWrapper = navbar.querySelector(
     "[data-navbar='menu-button']",
   ).parentElement;
 
@@ -19,7 +20,7 @@ gsap.registerPlugin(ScrollTrigger);
   visibleElements =
     window.innerWidth > 991
       ? [logo, ...menu, button]
-      : [logo, button, menuButton];
+      : [logo, button, menuButtonWrapper];
 
   animateNavbar(visibleElements);
 
@@ -45,6 +46,18 @@ gsap.registerPlugin(ScrollTrigger);
       });
     });
   }
+
+  //finish this
+  let navOverlay;
+  const intervalId = setInterval(() => {
+    navOverlay = document.querySelector(".w-nav-overlay");
+    if (navOverlay) {
+      clearInterval(intervalId);
+      navOverlay.addEventListener("click", () => {
+        lenis.start();
+      });
+    }
+  }, 100);
 
   function animateNavbar(elements) {
     let delay = 0;
