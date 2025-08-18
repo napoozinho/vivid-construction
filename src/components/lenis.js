@@ -14,3 +14,5 @@ gsap.ticker.add((time) => {
 lenis.on('scroll', () => {
   ScrollTrigger.update()
 })
+
+console.log("hehe")
