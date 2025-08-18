@@ -3,7 +3,7 @@ import gsap from "gsap";
 (() => {
   const component = document.querySelector("[data-custom-cursor]");
 
-  if (!component) return;
+  if (!component || !window.matchMedia("(pointer: fine)").matches) return;
 
   gsap.set(component, { autoAlpha: 0, scale: 0 });
 

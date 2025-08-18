@@ -6,7 +6,7 @@ gsap.registerPlugin(ScrollTrigger);
 (() => {
   const component = document.querySelector("[data-component='projects-mask']");
 
-  if (!component || !window.matchMedia("(pointer: fine)").matches) return;
+  if (!component) return;
 
   const projects = component.querySelectorAll("[data-projects-mask='item']");
   const projectsAmmount = projects.length;

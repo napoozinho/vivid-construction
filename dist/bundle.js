@@ -7872,6 +7872,7 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
       scrollTrigger: {
         trigger: wrapper,
         start: "top 90%",
+        //fix this
         toggleActions: "play none none reset"
       }
     });
@@ -7977,7 +7978,7 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
 gsapWithCSS.registerPlugin(ScrollTrigger);
 (() => {
   const component = document.querySelector("[data-component='projects-mask']");
-  if (!component || !window.matchMedia("(pointer: fine)").matches) return;
+  if (!component) return;
   const projects = component.querySelectorAll("[data-projects-mask='item']");
   const projectsAmmount = projects.length;
   const windowHeight = window.innerHeight;
@@ -8007,7 +8008,7 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
 })();
 (() => {
   const component = document.querySelector("[data-custom-cursor]");
-  if (!component) return;
+  if (!component || !window.matchMedia("(pointer: fine)").matches) return;
   gsapWithCSS.set(component, { autoAlpha: 0, scale: 0 });
   var cursorTriggers = document.querySelectorAll(
     "[data-custom-cursor-trigger]"
