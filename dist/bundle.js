@@ -7872,8 +7872,7 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
       scrollTrigger: {
         trigger: wrapper,
         start: "top 90%",
-        //fix this
-        toggleActions: "play none none reset"
+        toggleActions: "play none none reverse"
       }
     });
     if (blind) {
@@ -7893,11 +7892,19 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
     }
   });
 })();
+function isMobileDevice() {
+  return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  ) || window.innerWidth <= 768 && window.innerHeight <= 1024;
+}
 (() => {
   const component = document.querySelector("[data-component='home-hero']");
   if (!component) return;
   if ("scrollRestoration" in history) {
     history.scrollRestoration = "manual";
+  }
+  if (isMobileDevice()) {
+    gsapWithCSS.set(component, { height: window.innerHeight });
   }
   setTimeout(() => {
     lenis.scrollTo(0, { duration: 0.01, force: true });
@@ -7981,8 +7988,14 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
   if (!component) return;
   const projects = component.querySelectorAll("[data-projects-mask='item']");
   const projectsAmmount = projects.length;
-  const windowHeight = window.innerHeight;
-  gsapWithCSS.set(component, { height: `${projectsAmmount * 100}dvh` });
+  const windowHeight = isMobileDevice() ? window.screen.height : window.innerHeight;
+  if (isMobileDevice) {
+    gsapWithCSS.set(component, { height: `${projectsAmmount * windowHeight}px` });
+    gsapWithCSS.set(projects, { height: windowHeight });
+    gsapWithCSS.set(projects[0].parentElement, { height: windowHeight });
+  } else {
+    gsapWithCSS.set(component, { height: `${projectsAmmount * 100}svh` });
+  }
   projects.forEach((project, i) => {
     const projectOffsetY = (i - 1) * windowHeight;
     gsapWithCSS.set(project, { zIndex: i + 1 });
@@ -8029,7 +8042,7 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
         hideTween.kill();
         hideTween = null;
       }
-      gsapWithCSS.set("*", { cursor: "none" });
+      gsapWithCSS.set(trigger.querySelectorAll("*"), { cursor: "none" });
       gsapWithCSS.set(component, { autoAlpha: 1 });
       gsapWithCSS.to(component, {
         scale: 1,

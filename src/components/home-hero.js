@@ -1,6 +1,7 @@
 import gsap from "gsap";
 import { lenis } from "./lenis.js";
 import { duration, staggerAmount, easePrimary } from "../utils/variables.js";
+import { isMobileDevice } from "../utils/functions.js"
 
 (() => {
   const component = document.querySelector("[data-component='home-hero']");
@@ -9,6 +10,10 @@ import { duration, staggerAmount, easePrimary } from "../utils/variables.js";
   if ("scrollRestoration" in history) {
     history.scrollRestoration = "manual";
   }
+
+  if (isMobileDevice()) {
+    gsap.set(component, { height: window.innerHeight })
+  } 
 
   setTimeout(() => {
     lenis.scrollTo(0, { duration: 0.01, force: true });

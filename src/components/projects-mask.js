@@ -1,5 +1,6 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { isMobileDevice } from "../utils/functions";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -10,9 +11,15 @@ gsap.registerPlugin(ScrollTrigger);
 
   const projects = component.querySelectorAll("[data-projects-mask='item']");
   const projectsAmmount = projects.length;
-  const windowHeight = window.innerHeight;
+  const windowHeight = isMobileDevice() ? window.screen.height : window.innerHeight
 
-  gsap.set(component, { height: `${projectsAmmount * 100}dvh` });
+  if(isMobileDevice) {
+    gsap.set(component, { height: `${projectsAmmount * windowHeight}px` });
+    gsap.set(projects, { height: windowHeight });
+    gsap.set(projects[0].parentElement, { height: windowHeight });
+  } else {
+    gsap.set(component, { height: `${projectsAmmount * 100}svh` });
+  }
 
   projects.forEach((project, i) => {
     const projectOffsetY = (i - 1) * windowHeight;

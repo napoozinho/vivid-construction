@@ -30,7 +30,7 @@ import gsap from "gsap";
         hideTween.kill();
         hideTween = null;
       }
-      gsap.set("*", { cursor: "none" });
+      gsap.set(trigger.querySelectorAll("*"), { cursor: "none" });
       gsap.set(component, { autoAlpha: 1 });
       gsap.to(component, {
         scale: 1,
