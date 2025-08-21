@@ -11,9 +11,11 @@ gsap.registerPlugin(ScrollTrigger);
 
   const projects = component.querySelectorAll("[data-projects-mask='item']");
   const projectsAmmount = projects.length;
-  const windowHeight = isMobileDevice() ? window.screen.height : window.innerHeight
+  const windowHeight = isMobileDevice()
+    ? window.screen.height
+    : window.innerHeight;
 
-  if(isMobileDevice) {
+  if (isMobileDevice) {
     gsap.set(component, { height: `${projectsAmmount * windowHeight}px` });
     gsap.set(projects, { height: windowHeight });
     gsap.set(projects[0].parentElement, { height: windowHeight });
