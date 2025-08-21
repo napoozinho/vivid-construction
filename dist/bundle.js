@@ -7298,6 +7298,313 @@ lenis.on("scroll", () => {
   ScrollTrigger.update();
 });
 /*!
+ * SplitText 3.13.0
+ * https://gsap.com
+ *
+ * @license Copyright 2025, GreenSock. All rights reserved. Subject to the terms at https://gsap.com/standard-license.
+ * @author: Jack Doyle
+ */
+let gsap$1, _fonts, _coreInitted$1, _initIfNecessary = () => _coreInitted$1 || SplitText.register(window.gsap), _charSegmenter = typeof Intl !== "undefined" ? new Intl.Segmenter() : 0, _toArray = (r) => typeof r === "string" ? _toArray(document.querySelectorAll(r)) : "length" in r ? Array.from(r) : [r], _elements = (targets) => _toArray(targets).filter((e) => e instanceof HTMLElement), _emptyArray = [], _context = function() {
+}, _spacesRegEx = /\s+/g, _emojiSafeRegEx = new RegExp("\\p{RI}\\p{RI}|\\p{Emoji}(\\p{EMod}|\\u{FE0F}\\u{20E3}?|[\\u{E0020}-\\u{E007E}]+\\u{E007F})?(\\u{200D}\\p{Emoji}(\\p{EMod}|\\u{FE0F}\\u{20E3}?|[\\u{E0020}-\\u{E007E}]+\\u{E007F})?)*|.", "gu"), _emptyBounds = { left: 0, top: 0, width: 0, height: 0 }, _stretchToFitSpecialChars = (collection, specialCharsRegEx) => {
+  if (specialCharsRegEx) {
+    let charsFound = new Set(collection.join("").match(specialCharsRegEx) || _emptyArray), i = collection.length, slots, word, char, combined;
+    if (charsFound.size) {
+      while (--i > -1) {
+        word = collection[i];
+        for (char of charsFound) {
+          if (char.startsWith(word) && char.length > word.length) {
+            slots = 0;
+            combined = word;
+            while (char.startsWith(combined += collection[i + ++slots]) && combined.length < char.length) {
+            }
+            if (slots && combined.length === char.length) {
+              collection[i] = char;
+              collection.splice(i + 1, slots);
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+  return collection;
+}, _disallowInline = (element) => window.getComputedStyle(element).display === "inline" && (element.style.display = "inline-block"), _insertNodeBefore = (newChild, parent, existingChild) => parent.insertBefore(typeof newChild === "string" ? document.createTextNode(newChild) : newChild, existingChild), _getWrapper = (type, config3, collection) => {
+  let className = config3[type + "sClass"] || "", { tag = "div", aria = "auto", propIndex = false } = config3, display = type === "line" ? "block" : "inline-block", incrementClass = className.indexOf("++") > -1, wrapper = (text) => {
+    let el = document.createElement(tag), i = collection.length + 1;
+    className && (el.className = className + (incrementClass ? " " + className + i : ""));
+    propIndex && el.style.setProperty("--" + type, i + "");
+    aria !== "none" && el.setAttribute("aria-hidden", "true");
+    if (tag !== "span") {
+      el.style.position = "relative";
+      el.style.display = display;
+    }
+    el.textContent = text;
+    collection.push(el);
+    return el;
+  };
+  incrementClass && (className = className.replace("++", ""));
+  wrapper.collection = collection;
+  return wrapper;
+}, _getLineWrapper = (element, nodes, config3, collection) => {
+  let lineWrapper = _getWrapper("line", config3, collection), textAlign = window.getComputedStyle(element).textAlign || "left";
+  return (startIndex, endIndex) => {
+    let newLine = lineWrapper("");
+    newLine.style.textAlign = textAlign;
+    element.insertBefore(newLine, nodes[startIndex]);
+    for (; startIndex < endIndex; startIndex++) {
+      newLine.appendChild(nodes[startIndex]);
+    }
+    newLine.normalize();
+  };
+}, _splitWordsAndCharsRecursively = (element, config3, wordWrapper, charWrapper, prepForCharsOnly, deepSlice, ignore, charSplitRegEx, specialCharsRegEx, isNested) => {
+  var _a;
+  let nodes = Array.from(element.childNodes), i = 0, { wordDelimiter, reduceWhiteSpace = true, prepareText } = config3, elementBounds = element.getBoundingClientRect(), lastBounds = elementBounds, isPreformatted = !reduceWhiteSpace && window.getComputedStyle(element).whiteSpace.substring(0, 3) === "pre", ignoredPreviousSibling = 0, wordsCollection = wordWrapper.collection, wordDelimIsNotSpace, wordDelimString, wordDelimSplitter, curNode, words, curWordEl, startsWithSpace, endsWithSpace, j, bounds, curWordChars, clonedNode, curSubNode, tempSubNode, curTextContent, wordText, lastWordText, k;
+  if (typeof wordDelimiter === "object") {
+    wordDelimSplitter = wordDelimiter.delimiter || wordDelimiter;
+    wordDelimString = wordDelimiter.replaceWith || "";
+  } else {
+    wordDelimString = wordDelimiter === "" ? "" : wordDelimiter || " ";
+  }
+  wordDelimIsNotSpace = wordDelimString !== " ";
+  for (; i < nodes.length; i++) {
+    curNode = nodes[i];
+    if (curNode.nodeType === 3) {
+      curTextContent = curNode.textContent || "";
+      if (reduceWhiteSpace) {
+        curTextContent = curTextContent.replace(_spacesRegEx, " ");
+      } else if (isPreformatted) {
+        curTextContent = curTextContent.replace(/\n/g, wordDelimString + "\n");
+      }
+      prepareText && (curTextContent = prepareText(curTextContent, element));
+      curNode.textContent = curTextContent;
+      words = wordDelimString || wordDelimSplitter ? curTextContent.split(wordDelimSplitter || wordDelimString) : curTextContent.match(charSplitRegEx) || _emptyArray;
+      lastWordText = words[words.length - 1];
+      endsWithSpace = wordDelimIsNotSpace ? lastWordText.slice(-1) === " " : !lastWordText;
+      lastWordText || words.pop();
+      lastBounds = elementBounds;
+      startsWithSpace = wordDelimIsNotSpace ? words[0].charAt(0) === " " : !words[0];
+      startsWithSpace && _insertNodeBefore(" ", element, curNode);
+      words[0] || words.shift();
+      _stretchToFitSpecialChars(words, specialCharsRegEx);
+      deepSlice && isNested || (curNode.textContent = "");
+      for (j = 1; j <= words.length; j++) {
+        wordText = words[j - 1];
+        if (!reduceWhiteSpace && isPreformatted && wordText.charAt(0) === "\n") {
+          (_a = curNode.previousSibling) == null ? void 0 : _a.remove();
+          _insertNodeBefore(document.createElement("br"), element, curNode);
+          wordText = wordText.slice(1);
+        }
+        if (!reduceWhiteSpace && wordText === "") {
+          _insertNodeBefore(wordDelimString, element, curNode);
+        } else if (wordText === " ") {
+          element.insertBefore(document.createTextNode(" "), curNode);
+        } else {
+          wordDelimIsNotSpace && wordText.charAt(0) === " " && _insertNodeBefore(" ", element, curNode);
+          if (ignoredPreviousSibling && j === 1 && !startsWithSpace && wordsCollection.indexOf(ignoredPreviousSibling.parentNode) > -1) {
+            curWordEl = wordsCollection[wordsCollection.length - 1];
+            curWordEl.appendChild(document.createTextNode(charWrapper ? "" : wordText));
+          } else {
+            curWordEl = wordWrapper(charWrapper ? "" : wordText);
+            _insertNodeBefore(curWordEl, element, curNode);
+            ignoredPreviousSibling && j === 1 && !startsWithSpace && curWordEl.insertBefore(ignoredPreviousSibling, curWordEl.firstChild);
+          }
+          if (charWrapper) {
+            curWordChars = _charSegmenter ? _stretchToFitSpecialChars([..._charSegmenter.segment(wordText)].map((s) => s.segment), specialCharsRegEx) : wordText.match(charSplitRegEx) || _emptyArray;
+            for (k = 0; k < curWordChars.length; k++) {
+              curWordEl.appendChild(curWordChars[k] === " " ? document.createTextNode(" ") : charWrapper(curWordChars[k]));
+            }
+          }
+          if (deepSlice && isNested) {
+            curTextContent = curNode.textContent = curTextContent.substring(wordText.length + 1, curTextContent.length);
+            bounds = curWordEl.getBoundingClientRect();
+            if (bounds.top > lastBounds.top && bounds.left <= lastBounds.left) {
+              clonedNode = element.cloneNode();
+              curSubNode = element.childNodes[0];
+              while (curSubNode && curSubNode !== curWordEl) {
+                tempSubNode = curSubNode;
+                curSubNode = curSubNode.nextSibling;
+                clonedNode.appendChild(tempSubNode);
+              }
+              element.parentNode.insertBefore(clonedNode, element);
+              prepForCharsOnly && _disallowInline(clonedNode);
+            }
+            lastBounds = bounds;
+          }
+          if (j < words.length || endsWithSpace) {
+            _insertNodeBefore(j >= words.length ? " " : wordDelimIsNotSpace && wordText.slice(-1) === " " ? " " + wordDelimString : wordDelimString, element, curNode);
+          }
+        }
+      }
+      element.removeChild(curNode);
+      ignoredPreviousSibling = 0;
+    } else if (curNode.nodeType === 1) {
+      if (ignore && ignore.indexOf(curNode) > -1) {
+        wordsCollection.indexOf(curNode.previousSibling) > -1 && wordsCollection[wordsCollection.length - 1].appendChild(curNode);
+        ignoredPreviousSibling = curNode;
+      } else {
+        _splitWordsAndCharsRecursively(curNode, config3, wordWrapper, charWrapper, prepForCharsOnly, deepSlice, ignore, charSplitRegEx, specialCharsRegEx, true);
+        ignoredPreviousSibling = 0;
+      }
+      prepForCharsOnly && _disallowInline(curNode);
+    }
+  }
+};
+const _SplitText = class _SplitText2 {
+  constructor(elements, config3) {
+    this.isSplit = false;
+    _initIfNecessary();
+    this.elements = _elements(elements);
+    this.chars = [];
+    this.words = [];
+    this.lines = [];
+    this.masks = [];
+    this.vars = config3;
+    this._split = () => this.isSplit && this.split(this.vars);
+    let orig = [], timerId, checkWidths = () => {
+      let i = orig.length, o;
+      while (i--) {
+        o = orig[i];
+        let w = o.element.offsetWidth;
+        if (w !== o.width) {
+          o.width = w;
+          this._split();
+          return;
+        }
+      }
+    };
+    this._data = { orig, obs: typeof ResizeObserver !== "undefined" && new ResizeObserver(() => {
+      clearTimeout(timerId);
+      timerId = setTimeout(checkWidths, 200);
+    }) };
+    _context(this);
+    this.split(config3);
+  }
+  split(config3) {
+    this.isSplit && this.revert();
+    this.vars = config3 = config3 || this.vars || {};
+    let { type = "chars,words,lines", aria = "auto", deepSlice = true, smartWrap, onSplit, autoSplit = false, specialChars, mask } = this.vars, splitLines = type.indexOf("lines") > -1, splitCharacters = type.indexOf("chars") > -1, splitWords = type.indexOf("words") > -1, onlySplitCharacters = splitCharacters && !splitWords && !splitLines, specialCharsRegEx = specialChars && ("push" in specialChars ? new RegExp("(?:" + specialChars.join("|") + ")", "gu") : specialChars), finalCharSplitRegEx = specialCharsRegEx ? new RegExp(specialCharsRegEx.source + "|" + _emojiSafeRegEx.source, "gu") : _emojiSafeRegEx, ignore = !!config3.ignore && _elements(config3.ignore), { orig, animTime, obs } = this._data, onSplitResult;
+    if (splitCharacters || splitWords || splitLines) {
+      this.elements.forEach((element, index) => {
+        orig[index] = {
+          element,
+          html: element.innerHTML,
+          ariaL: element.getAttribute("aria-label"),
+          ariaH: element.getAttribute("aria-hidden")
+        };
+        aria === "auto" ? element.setAttribute("aria-label", (element.textContent || "").trim()) : aria === "hidden" && element.setAttribute("aria-hidden", "true");
+        let chars = [], words = [], lines = [], charWrapper = splitCharacters ? _getWrapper("char", config3, chars) : null, wordWrapper = _getWrapper("word", config3, words), i, curWord, smartWrapSpan, nextSibling;
+        _splitWordsAndCharsRecursively(element, config3, wordWrapper, charWrapper, onlySplitCharacters, deepSlice && (splitLines || onlySplitCharacters), ignore, finalCharSplitRegEx, specialCharsRegEx, false);
+        if (splitLines) {
+          let nodes = _toArray(element.childNodes), wrapLine = _getLineWrapper(element, nodes, config3, lines), curNode, toRemove = [], lineStartIndex = 0, allBounds = nodes.map((n) => n.nodeType === 1 ? n.getBoundingClientRect() : _emptyBounds), lastBounds = _emptyBounds;
+          for (i = 0; i < nodes.length; i++) {
+            curNode = nodes[i];
+            if (curNode.nodeType === 1) {
+              if (curNode.nodeName === "BR") {
+                toRemove.push(curNode);
+                wrapLine(lineStartIndex, i + 1);
+                lineStartIndex = i + 1;
+                lastBounds = allBounds[lineStartIndex];
+              } else {
+                if (i && allBounds[i].top > lastBounds.top && allBounds[i].left <= lastBounds.left) {
+                  wrapLine(lineStartIndex, i);
+                  lineStartIndex = i;
+                }
+                lastBounds = allBounds[i];
+              }
+            }
+          }
+          lineStartIndex < i && wrapLine(lineStartIndex, i);
+          toRemove.forEach((el) => {
+            var _a;
+            return (_a = el.parentNode) == null ? void 0 : _a.removeChild(el);
+          });
+        }
+        if (!splitWords) {
+          for (i = 0; i < words.length; i++) {
+            curWord = words[i];
+            if (splitCharacters || !curWord.nextSibling || curWord.nextSibling.nodeType !== 3) {
+              if (smartWrap && !splitLines) {
+                smartWrapSpan = document.createElement("span");
+                smartWrapSpan.style.whiteSpace = "nowrap";
+                while (curWord.firstChild) {
+                  smartWrapSpan.appendChild(curWord.firstChild);
+                }
+                curWord.replaceWith(smartWrapSpan);
+              } else {
+                curWord.replaceWith(...curWord.childNodes);
+              }
+            } else {
+              nextSibling = curWord.nextSibling;
+              if (nextSibling && nextSibling.nodeType === 3) {
+                nextSibling.textContent = (curWord.textContent || "") + (nextSibling.textContent || "");
+                curWord.remove();
+              }
+            }
+          }
+          words.length = 0;
+          element.normalize();
+        }
+        this.lines.push(...lines);
+        this.words.push(...words);
+        this.chars.push(...chars);
+      });
+      mask && this[mask] && this.masks.push(...this[mask].map((el) => {
+        let maskEl = el.cloneNode();
+        el.replaceWith(maskEl);
+        maskEl.appendChild(el);
+        el.className && (maskEl.className = el.className.replace(/(\b\w+\b)/g, "$1-mask"));
+        maskEl.style.overflow = "clip";
+        return maskEl;
+      }));
+    }
+    this.isSplit = true;
+    _fonts && (autoSplit ? _fonts.addEventListener("loadingdone", this._split) : _fonts.status === "loading" && console.warn("SplitText called before fonts loaded"));
+    if ((onSplitResult = onSplit && onSplit(this)) && onSplitResult.totalTime) {
+      this._data.anim = animTime ? onSplitResult.totalTime(animTime) : onSplitResult;
+    }
+    splitLines && autoSplit && this.elements.forEach((element, index) => {
+      orig[index].width = element.offsetWidth;
+      obs && obs.observe(element);
+    });
+    return this;
+  }
+  revert() {
+    var _a, _b;
+    let { orig, anim, obs } = this._data;
+    obs && obs.disconnect();
+    orig.forEach(({ element, html, ariaL, ariaH }) => {
+      element.innerHTML = html;
+      ariaL ? element.setAttribute("aria-label", ariaL) : element.removeAttribute("aria-label");
+      ariaH ? element.setAttribute("aria-hidden", ariaH) : element.removeAttribute("aria-hidden");
+    });
+    this.chars.length = this.words.length = this.lines.length = orig.length = this.masks.length = 0;
+    this.isSplit = false;
+    _fonts == null ? void 0 : _fonts.removeEventListener("loadingdone", this._split);
+    if (anim) {
+      this._data.animTime = anim.totalTime();
+      anim.revert();
+    }
+    (_b = (_a = this.vars).onRevert) == null ? void 0 : _b.call(_a, this);
+    return this;
+  }
+  static create(elements, config3) {
+    return new _SplitText2(elements, config3);
+  }
+  static register(core) {
+    gsap$1 = gsap$1 || core || window.gsap;
+    if (gsap$1) {
+      _toArray = gsap$1.utils.toArray;
+      _context = gsap$1.core.context || _context;
+    }
+    if (!_coreInitted$1 && window.innerWidth > 0) {
+      _fonts = document.fonts;
+      _coreInitted$1 = true;
+    }
+  }
+};
+_SplitText.version = "3.13.0";
+let SplitText = _SplitText;
+/*!
  * paths 3.13.0
  * https://gsap.com
  *
@@ -7537,13 +7844,13 @@ function rawPathToString(rawPath) {
  * Subject to the terms at https://gsap.com/standard-license
  * @author: Jack Doyle, jack@greensock.com
 */
-var gsap$1, _coreInitted$1, _getGSAP3 = function _getGSAP4() {
-  return gsap$1 || typeof window !== "undefined" && (gsap$1 = window.gsap) && gsap$1.registerPlugin && gsap$1;
+var gsap, _coreInitted, _getGSAP3 = function _getGSAP4() {
+  return gsap || typeof window !== "undefined" && (gsap = window.gsap) && gsap.registerPlugin && gsap;
 }, _initCore3 = function _initCore4() {
-  gsap$1 = _getGSAP3();
-  if (gsap$1) {
-    gsap$1.registerEase("_CE", CustomEase.create);
-    _coreInitted$1 = 1;
+  gsap = _getGSAP3();
+  if (gsap) {
+    gsap.registerEase("_CE", CustomEase.create);
+    _coreInitted = 1;
   } else {
     console.warn("Please gsap.registerPlugin(CustomEase)");
   }
@@ -7594,7 +7901,7 @@ var gsap$1, _coreInitted$1, _getGSAP3 = function _getGSAP4() {
 };
 var CustomEase = /* @__PURE__ */ function() {
   function CustomEase2(id, data, config3) {
-    _coreInitted$1 || _initCore3();
+    _coreInitted || _initCore3();
     this.id = id;
     this.setData(data, config3);
   }
@@ -7704,7 +8011,7 @@ var CustomEase = /* @__PURE__ */ function() {
       return point2.y + (p2 - point2.x) / point2.cx * point2.cy;
     };
     this.ease.custom = this;
-    this.id && gsap$1 && gsap$1.registerEase(this.id, this.ease);
+    this.id && gsap && gsap.registerEase(this.id, this.ease);
     return this;
   };
   _proto.getSVGData = function getSVGData(config3) {
@@ -7714,21 +8021,21 @@ var CustomEase = /* @__PURE__ */ function() {
     return new CustomEase2(id, data, config3).ease;
   };
   CustomEase2.register = function register(core) {
-    gsap$1 = core;
+    gsap = core;
     _initCore3();
   };
   CustomEase2.get = function get(id) {
-    return gsap$1.parseEase(id);
+    return gsap.parseEase(id);
   };
   CustomEase2.getSVGData = function getSVGData(ease, config3) {
     config3 = config3 || {};
-    var width = config3.width || 100, height = config3.height || 100, x = config3.x || 0, y = (config3.y || 0) + height, e = gsap$1.utils.toArray(config3.path)[0], a, slope, i, inc, tx, ty, precision, threshold, prevX, prevY;
+    var width = config3.width || 100, height = config3.height || 100, x = config3.x || 0, y = (config3.y || 0) + height, e = gsap.utils.toArray(config3.path)[0], a, slope, i, inc, tx, ty, precision, threshold, prevX, prevY;
     if (config3.invert) {
       height = -height;
       y = 0;
     }
     if (typeof ease === "string") {
-      ease = gsap$1.parseEase(ease);
+      ease = gsap.parseEase(ease);
     }
     if (ease.custom) {
       ease = ease.custom;
@@ -7763,7 +8070,7 @@ var CustomEase = /* @__PURE__ */ function() {
 }();
 CustomEase.version = "3.13.0";
 CustomEase.headless = true;
-_getGSAP3() && gsap$1.registerPlugin(CustomEase);
+_getGSAP3() && gsap.registerPlugin(CustomEase);
 gsapWithCSS.registerPlugin(CustomEase);
 CustomEase.create("ease-primary", "0.62, 0.05, 0.01, 0.99");
 CustomEase.create("ease-secondary", "0.16, 1, 0.35, 1");
@@ -7771,6 +8078,56 @@ const duration = 1.47;
 const staggerAmount = 0.2;
 const easePrimary = "ease-primary";
 const easeSecondary = "ease-secondary";
+gsapWithCSS.registerPlugin(ScrollTrigger, SplitText);
+document.fonts.ready.then(() => {
+  const texts = document.querySelectorAll("[data-split-text='true']");
+  texts.forEach((el) => {
+    el.innerHTML = el.innerHTML.replace(/\n/g, "<br>");
+  });
+  SplitText.create(texts, {
+    autoSplit: true,
+    type: "lines",
+    mask: "lines",
+    linesClass: "line",
+    prepareText: (text, el) => {
+      let indent = el.dataset.indent || "";
+      if (!indent) return text;
+      let parts = indent.split(",").map(Number);
+      while (parts.length < 4) {
+        parts.push(parts[parts.length - 1]);
+      }
+      const [desktop, tablet, landscape, portrait] = parts;
+      const breakpoints = { desktop, tablet, landscape, portrait };
+      let key;
+      if (window.innerWidth > 991) key = "desktop";
+      else if (window.innerWidth > 767) key = "tablet";
+      else if (window.innerWidth > 479) key = "landscape";
+      else key = "portrait";
+      const spaces = " ".repeat(breakpoints[key]);
+      return spaces + text;
+    }
+  });
+  texts.forEach((textElement) => {
+    if (textElement.dataset.autoplay !== "true") return;
+    const delay = Number(textElement.dataset.delay) / 1e3 || 0;
+    const lines = textElement.querySelectorAll(".line");
+    gsapWithCSS.set(textElement, { autoAlpha: 1 });
+    const tl = gsapWithCSS.timeline({ paused: true });
+    tl.from(lines, {
+      yPercent: 100,
+      duration,
+      ease: easePrimary,
+      stagger: { amount: staggerAmount },
+      delay
+    });
+    ScrollTrigger.create({
+      animation: tl,
+      trigger: textElement,
+      start: "0% 100%",
+      toggleActions: "play none none reset"
+    });
+  });
+});
 gsapWithCSS.registerPlugin(ScrollTrigger);
 (() => {
   const navbar = document.querySelector("[data-component='navbar']");
@@ -8062,360 +8419,113 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
     });
   });
 })();
-/*!
- * SplitText 3.13.0
- * https://gsap.com
- *
- * @license Copyright 2025, GreenSock. All rights reserved. Subject to the terms at https://gsap.com/standard-license.
- * @author: Jack Doyle
- */
-let gsap, _fonts, _coreInitted, _initIfNecessary = () => _coreInitted || SplitText.register(window.gsap), _charSegmenter = typeof Intl !== "undefined" ? new Intl.Segmenter() : 0, _toArray = (r) => typeof r === "string" ? _toArray(document.querySelectorAll(r)) : "length" in r ? Array.from(r) : [r], _elements = (targets) => _toArray(targets).filter((e) => e instanceof HTMLElement), _emptyArray = [], _context = function() {
-}, _spacesRegEx = /\s+/g, _emojiSafeRegEx = new RegExp("\\p{RI}\\p{RI}|\\p{Emoji}(\\p{EMod}|\\u{FE0F}\\u{20E3}?|[\\u{E0020}-\\u{E007E}]+\\u{E007F})?(\\u{200D}\\p{Emoji}(\\p{EMod}|\\u{FE0F}\\u{20E3}?|[\\u{E0020}-\\u{E007E}]+\\u{E007F})?)*|.", "gu"), _emptyBounds = { left: 0, top: 0, width: 0, height: 0 }, _stretchToFitSpecialChars = (collection, specialCharsRegEx) => {
-  if (specialCharsRegEx) {
-    let charsFound = new Set(collection.join("").match(specialCharsRegEx) || _emptyArray), i = collection.length, slots, word, char, combined;
-    if (charsFound.size) {
-      while (--i > -1) {
-        word = collection[i];
-        for (char of charsFound) {
-          if (char.startsWith(word) && char.length > word.length) {
-            slots = 0;
-            combined = word;
-            while (char.startsWith(combined += collection[i + ++slots]) && combined.length < char.length) {
-            }
-            if (slots && combined.length === char.length) {
-              collection[i] = char;
-              collection.splice(i + 1, slots);
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-  return collection;
-}, _disallowInline = (element) => window.getComputedStyle(element).display === "inline" && (element.style.display = "inline-block"), _insertNodeBefore = (newChild, parent, existingChild) => parent.insertBefore(typeof newChild === "string" ? document.createTextNode(newChild) : newChild, existingChild), _getWrapper = (type, config3, collection) => {
-  let className = config3[type + "sClass"] || "", { tag = "div", aria = "auto", propIndex = false } = config3, display = type === "line" ? "block" : "inline-block", incrementClass = className.indexOf("++") > -1, wrapper = (text) => {
-    let el = document.createElement(tag), i = collection.length + 1;
-    className && (el.className = className + (incrementClass ? " " + className + i : ""));
-    propIndex && el.style.setProperty("--" + type, i + "");
-    aria !== "none" && el.setAttribute("aria-hidden", "true");
-    if (tag !== "span") {
-      el.style.position = "relative";
-      el.style.display = display;
-    }
-    el.textContent = text;
-    collection.push(el);
-    return el;
-  };
-  incrementClass && (className = className.replace("++", ""));
-  wrapper.collection = collection;
-  return wrapper;
-}, _getLineWrapper = (element, nodes, config3, collection) => {
-  let lineWrapper = _getWrapper("line", config3, collection), textAlign = window.getComputedStyle(element).textAlign || "left";
-  return (startIndex, endIndex) => {
-    let newLine = lineWrapper("");
-    newLine.style.textAlign = textAlign;
-    element.insertBefore(newLine, nodes[startIndex]);
-    for (; startIndex < endIndex; startIndex++) {
-      newLine.appendChild(nodes[startIndex]);
-    }
-    newLine.normalize();
-  };
-}, _splitWordsAndCharsRecursively = (element, config3, wordWrapper, charWrapper, prepForCharsOnly, deepSlice, ignore, charSplitRegEx, specialCharsRegEx, isNested) => {
-  var _a;
-  let nodes = Array.from(element.childNodes), i = 0, { wordDelimiter, reduceWhiteSpace = true, prepareText } = config3, elementBounds = element.getBoundingClientRect(), lastBounds = elementBounds, isPreformatted = !reduceWhiteSpace && window.getComputedStyle(element).whiteSpace.substring(0, 3) === "pre", ignoredPreviousSibling = 0, wordsCollection = wordWrapper.collection, wordDelimIsNotSpace, wordDelimString, wordDelimSplitter, curNode, words, curWordEl, startsWithSpace, endsWithSpace, j, bounds, curWordChars, clonedNode, curSubNode, tempSubNode, curTextContent, wordText, lastWordText, k;
-  if (typeof wordDelimiter === "object") {
-    wordDelimSplitter = wordDelimiter.delimiter || wordDelimiter;
-    wordDelimString = wordDelimiter.replaceWith || "";
-  } else {
-    wordDelimString = wordDelimiter === "" ? "" : wordDelimiter || " ";
-  }
-  wordDelimIsNotSpace = wordDelimString !== " ";
-  for (; i < nodes.length; i++) {
-    curNode = nodes[i];
-    if (curNode.nodeType === 3) {
-      curTextContent = curNode.textContent || "";
-      if (reduceWhiteSpace) {
-        curTextContent = curTextContent.replace(_spacesRegEx, " ");
-      } else if (isPreformatted) {
-        curTextContent = curTextContent.replace(/\n/g, wordDelimString + "\n");
-      }
-      prepareText && (curTextContent = prepareText(curTextContent, element));
-      curNode.textContent = curTextContent;
-      words = wordDelimString || wordDelimSplitter ? curTextContent.split(wordDelimSplitter || wordDelimString) : curTextContent.match(charSplitRegEx) || _emptyArray;
-      lastWordText = words[words.length - 1];
-      endsWithSpace = wordDelimIsNotSpace ? lastWordText.slice(-1) === " " : !lastWordText;
-      lastWordText || words.pop();
-      lastBounds = elementBounds;
-      startsWithSpace = wordDelimIsNotSpace ? words[0].charAt(0) === " " : !words[0];
-      startsWithSpace && _insertNodeBefore(" ", element, curNode);
-      words[0] || words.shift();
-      _stretchToFitSpecialChars(words, specialCharsRegEx);
-      deepSlice && isNested || (curNode.textContent = "");
-      for (j = 1; j <= words.length; j++) {
-        wordText = words[j - 1];
-        if (!reduceWhiteSpace && isPreformatted && wordText.charAt(0) === "\n") {
-          (_a = curNode.previousSibling) == null ? void 0 : _a.remove();
-          _insertNodeBefore(document.createElement("br"), element, curNode);
-          wordText = wordText.slice(1);
-        }
-        if (!reduceWhiteSpace && wordText === "") {
-          _insertNodeBefore(wordDelimString, element, curNode);
-        } else if (wordText === " ") {
-          element.insertBefore(document.createTextNode(" "), curNode);
-        } else {
-          wordDelimIsNotSpace && wordText.charAt(0) === " " && _insertNodeBefore(" ", element, curNode);
-          if (ignoredPreviousSibling && j === 1 && !startsWithSpace && wordsCollection.indexOf(ignoredPreviousSibling.parentNode) > -1) {
-            curWordEl = wordsCollection[wordsCollection.length - 1];
-            curWordEl.appendChild(document.createTextNode(charWrapper ? "" : wordText));
-          } else {
-            curWordEl = wordWrapper(charWrapper ? "" : wordText);
-            _insertNodeBefore(curWordEl, element, curNode);
-            ignoredPreviousSibling && j === 1 && !startsWithSpace && curWordEl.insertBefore(ignoredPreviousSibling, curWordEl.firstChild);
-          }
-          if (charWrapper) {
-            curWordChars = _charSegmenter ? _stretchToFitSpecialChars([..._charSegmenter.segment(wordText)].map((s) => s.segment), specialCharsRegEx) : wordText.match(charSplitRegEx) || _emptyArray;
-            for (k = 0; k < curWordChars.length; k++) {
-              curWordEl.appendChild(curWordChars[k] === " " ? document.createTextNode(" ") : charWrapper(curWordChars[k]));
-            }
-          }
-          if (deepSlice && isNested) {
-            curTextContent = curNode.textContent = curTextContent.substring(wordText.length + 1, curTextContent.length);
-            bounds = curWordEl.getBoundingClientRect();
-            if (bounds.top > lastBounds.top && bounds.left <= lastBounds.left) {
-              clonedNode = element.cloneNode();
-              curSubNode = element.childNodes[0];
-              while (curSubNode && curSubNode !== curWordEl) {
-                tempSubNode = curSubNode;
-                curSubNode = curSubNode.nextSibling;
-                clonedNode.appendChild(tempSubNode);
-              }
-              element.parentNode.insertBefore(clonedNode, element);
-              prepForCharsOnly && _disallowInline(clonedNode);
-            }
-            lastBounds = bounds;
-          }
-          if (j < words.length || endsWithSpace) {
-            _insertNodeBefore(j >= words.length ? " " : wordDelimIsNotSpace && wordText.slice(-1) === " " ? " " + wordDelimString : wordDelimString, element, curNode);
-          }
-        }
-      }
-      element.removeChild(curNode);
-      ignoredPreviousSibling = 0;
-    } else if (curNode.nodeType === 1) {
-      if (ignore && ignore.indexOf(curNode) > -1) {
-        wordsCollection.indexOf(curNode.previousSibling) > -1 && wordsCollection[wordsCollection.length - 1].appendChild(curNode);
-        ignoredPreviousSibling = curNode;
-      } else {
-        _splitWordsAndCharsRecursively(curNode, config3, wordWrapper, charWrapper, prepForCharsOnly, deepSlice, ignore, charSplitRegEx, specialCharsRegEx, true);
-        ignoredPreviousSibling = 0;
-      }
-      prepForCharsOnly && _disallowInline(curNode);
-    }
-  }
-};
-const _SplitText = class _SplitText2 {
-  constructor(elements, config3) {
-    this.isSplit = false;
-    _initIfNecessary();
-    this.elements = _elements(elements);
-    this.chars = [];
-    this.words = [];
-    this.lines = [];
-    this.masks = [];
-    this.vars = config3;
-    this._split = () => this.isSplit && this.split(this.vars);
-    let orig = [], timerId, checkWidths = () => {
-      let i = orig.length, o;
-      while (i--) {
-        o = orig[i];
-        let w = o.element.offsetWidth;
-        if (w !== o.width) {
-          o.width = w;
-          this._split();
-          return;
-        }
-      }
-    };
-    this._data = { orig, obs: typeof ResizeObserver !== "undefined" && new ResizeObserver(() => {
-      clearTimeout(timerId);
-      timerId = setTimeout(checkWidths, 200);
-    }) };
-    _context(this);
-    this.split(config3);
-  }
-  split(config3) {
-    this.isSplit && this.revert();
-    this.vars = config3 = config3 || this.vars || {};
-    let { type = "chars,words,lines", aria = "auto", deepSlice = true, smartWrap, onSplit, autoSplit = false, specialChars, mask } = this.vars, splitLines = type.indexOf("lines") > -1, splitCharacters = type.indexOf("chars") > -1, splitWords = type.indexOf("words") > -1, onlySplitCharacters = splitCharacters && !splitWords && !splitLines, specialCharsRegEx = specialChars && ("push" in specialChars ? new RegExp("(?:" + specialChars.join("|") + ")", "gu") : specialChars), finalCharSplitRegEx = specialCharsRegEx ? new RegExp(specialCharsRegEx.source + "|" + _emojiSafeRegEx.source, "gu") : _emojiSafeRegEx, ignore = !!config3.ignore && _elements(config3.ignore), { orig, animTime, obs } = this._data, onSplitResult;
-    if (splitCharacters || splitWords || splitLines) {
-      this.elements.forEach((element, index) => {
-        orig[index] = {
-          element,
-          html: element.innerHTML,
-          ariaL: element.getAttribute("aria-label"),
-          ariaH: element.getAttribute("aria-hidden")
-        };
-        aria === "auto" ? element.setAttribute("aria-label", (element.textContent || "").trim()) : aria === "hidden" && element.setAttribute("aria-hidden", "true");
-        let chars = [], words = [], lines = [], charWrapper = splitCharacters ? _getWrapper("char", config3, chars) : null, wordWrapper = _getWrapper("word", config3, words), i, curWord, smartWrapSpan, nextSibling;
-        _splitWordsAndCharsRecursively(element, config3, wordWrapper, charWrapper, onlySplitCharacters, deepSlice && (splitLines || onlySplitCharacters), ignore, finalCharSplitRegEx, specialCharsRegEx, false);
-        if (splitLines) {
-          let nodes = _toArray(element.childNodes), wrapLine = _getLineWrapper(element, nodes, config3, lines), curNode, toRemove = [], lineStartIndex = 0, allBounds = nodes.map((n) => n.nodeType === 1 ? n.getBoundingClientRect() : _emptyBounds), lastBounds = _emptyBounds;
-          for (i = 0; i < nodes.length; i++) {
-            curNode = nodes[i];
-            if (curNode.nodeType === 1) {
-              if (curNode.nodeName === "BR") {
-                toRemove.push(curNode);
-                wrapLine(lineStartIndex, i + 1);
-                lineStartIndex = i + 1;
-                lastBounds = allBounds[lineStartIndex];
-              } else {
-                if (i && allBounds[i].top > lastBounds.top && allBounds[i].left <= lastBounds.left) {
-                  wrapLine(lineStartIndex, i);
-                  lineStartIndex = i;
-                }
-                lastBounds = allBounds[i];
-              }
-            }
-          }
-          lineStartIndex < i && wrapLine(lineStartIndex, i);
-          toRemove.forEach((el) => {
-            var _a;
-            return (_a = el.parentNode) == null ? void 0 : _a.removeChild(el);
-          });
-        }
-        if (!splitWords) {
-          for (i = 0; i < words.length; i++) {
-            curWord = words[i];
-            if (splitCharacters || !curWord.nextSibling || curWord.nextSibling.nodeType !== 3) {
-              if (smartWrap && !splitLines) {
-                smartWrapSpan = document.createElement("span");
-                smartWrapSpan.style.whiteSpace = "nowrap";
-                while (curWord.firstChild) {
-                  smartWrapSpan.appendChild(curWord.firstChild);
-                }
-                curWord.replaceWith(smartWrapSpan);
-              } else {
-                curWord.replaceWith(...curWord.childNodes);
-              }
-            } else {
-              nextSibling = curWord.nextSibling;
-              if (nextSibling && nextSibling.nodeType === 3) {
-                nextSibling.textContent = (curWord.textContent || "") + (nextSibling.textContent || "");
-                curWord.remove();
-              }
-            }
-          }
-          words.length = 0;
-          element.normalize();
-        }
-        this.lines.push(...lines);
-        this.words.push(...words);
-        this.chars.push(...chars);
-      });
-      mask && this[mask] && this.masks.push(...this[mask].map((el) => {
-        let maskEl = el.cloneNode();
-        el.replaceWith(maskEl);
-        maskEl.appendChild(el);
-        el.className && (maskEl.className = el.className.replace(/(\b\w+\b)/g, "$1-mask"));
-        maskEl.style.overflow = "clip";
-        return maskEl;
-      }));
-    }
-    this.isSplit = true;
-    _fonts && (autoSplit ? _fonts.addEventListener("loadingdone", this._split) : _fonts.status === "loading" && console.warn("SplitText called before fonts loaded"));
-    if ((onSplitResult = onSplit && onSplit(this)) && onSplitResult.totalTime) {
-      this._data.anim = animTime ? onSplitResult.totalTime(animTime) : onSplitResult;
-    }
-    splitLines && autoSplit && this.elements.forEach((element, index) => {
-      orig[index].width = element.offsetWidth;
-      obs && obs.observe(element);
-    });
-    return this;
-  }
-  revert() {
-    var _a, _b;
-    let { orig, anim, obs } = this._data;
-    obs && obs.disconnect();
-    orig.forEach(({ element, html, ariaL, ariaH }) => {
-      element.innerHTML = html;
-      ariaL ? element.setAttribute("aria-label", ariaL) : element.removeAttribute("aria-label");
-      ariaH ? element.setAttribute("aria-hidden", ariaH) : element.removeAttribute("aria-hidden");
-    });
-    this.chars.length = this.words.length = this.lines.length = orig.length = this.masks.length = 0;
-    this.isSplit = false;
-    _fonts == null ? void 0 : _fonts.removeEventListener("loadingdone", this._split);
-    if (anim) {
-      this._data.animTime = anim.totalTime();
-      anim.revert();
-    }
-    (_b = (_a = this.vars).onRevert) == null ? void 0 : _b.call(_a, this);
-    return this;
-  }
-  static create(elements, config3) {
-    return new _SplitText2(elements, config3);
-  }
-  static register(core) {
-    gsap = gsap || core || window.gsap;
-    if (gsap) {
-      _toArray = gsap.utils.toArray;
-      _context = gsap.core.context || _context;
-    }
-    if (!_coreInitted && window.innerWidth > 0) {
-      _fonts = document.fonts;
-      _coreInitted = true;
-    }
-  }
-};
-_SplitText.version = "3.13.0";
-let SplitText = _SplitText;
-gsapWithCSS.registerPlugin(ScrollTrigger, SplitText);
-document.fonts.ready.then(() => {
-  const texts = document.querySelectorAll("[data-split-text='true']");
-  texts.forEach((el) => {
-    el.innerHTML = el.innerHTML.replace(/\n/g, "<br>");
-  });
-  SplitText.create(texts, {
-    autoSplit: true,
-    type: "lines",
-    mask: "lines",
-    linesClass: "line",
-    prepareText: (text, el) => {
-      let indent = el.dataset.indent || "";
-      if (!indent) return text;
-      let parts = indent.split(",").map(Number);
-      while (parts.length < 4) {
-        parts.push(parts[parts.length - 1]);
-      }
-      const [desktop, tablet, landscape, portrait] = parts;
-      const breakpoints = { desktop, tablet, landscape, portrait };
-      let key;
-      if (window.innerWidth > 991) key = "desktop";
-      else if (window.innerWidth > 767) key = "tablet";
-      else if (window.innerWidth > 479) key = "landscape";
-      else key = "portrait";
-      const spaces = " ".repeat(breakpoints[key]);
-      return spaces + text;
-    }
-  });
-  texts.forEach((textElement) => {
-    if (textElement.dataset.autoplay !== "true") return;
-    const delay = Number(textElement.dataset.delay) / 1e3 || 0;
-    const lines = textElement.querySelectorAll(".line");
-    gsapWithCSS.set(textElement, { autoAlpha: 1 });
-    const tl = gsapWithCSS.timeline({ paused: true });
-    tl.from(lines, {
-      yPercent: 100,
-      duration,
-      ease: easePrimary,
-      stagger: { amount: staggerAmount },
-      delay
-    });
-    ScrollTrigger.create({
-      animation: tl,
-      trigger: textElement,
-      start: "0% 100%",
-      toggleActions: "play none none reset"
+gsapWithCSS.registerPlugin(ScrollTrigger);
+(() => {
+  const component = document.querySelector("[data-component='values']");
+  if (!component) return;
+  const imagesWrapper = component.querySelectorAll(
+    "[data-values='image-wrapper']"
+  );
+  const buttons = component.querySelectorAll("[data-values='button']");
+  const descriptions = component.querySelectorAll(
+    "[data-values='description']"
+  );
+  if (!imagesWrapper || !buttons || !descriptions) return;
+  const duration2 = 1;
+  let zIndex = 0;
+  initSetup();
+  buttons.forEach((button) => {
+    button.addEventListener("click", (e) => {
+      const id = e.currentTarget.dataset.id;
+      triggerTab(id);
     });
   });
-});
+  ScrollTrigger.create({
+    trigger: buttons[0],
+    start: "top bottom",
+    onEnter: () => buttons[0].click()
+  });
+  function triggerTab(id) {
+    const currentlyActiveButton = [...buttons].find(
+      (el) => el.classList.contains("is-active")
+    );
+    let currentlyActiveId = null;
+    if (currentlyActiveButton) {
+      currentlyActiveId = currentlyActiveButton.dataset.id;
+    }
+    const button = getById2(buttons, id);
+    if (button.classList.contains("is-active")) return;
+    const imageWrapper = getById2(imagesWrapper, id);
+    const description = getById2(descriptions, id);
+    if (currentlyActiveId) removeActive(currentlyActiveId);
+    setActive(button, imageWrapper, description);
+  }
+  function initSetup() {
+    buttons.forEach((button, i) => {
+      button.classList.remove("is-active");
+      const index = button.querySelector(
+        "[data-values='button-index-wrapper']"
+      );
+      if (!index) return;
+      const textElement = index.querySelector("p");
+      if (!textElement) return;
+      textElement.textContent = `(${textElement.textContent.padStart(2, "0")})`;
+    });
+    gsapWithCSS.set(imagesWrapper, { clipPath: "inset(100% 0% 0% 0%)" });
+    gsapWithCSS.set(descriptions, {
+      yPercent: 50,
+      autoAlpha: 0
+    });
+    const indexesMobile = document.querySelectorAll(
+      "[data-value-index-mobile]"
+    );
+    indexesMobile.forEach((index) => {
+      const textElement = index.firstChild;
+      textElement.textContent = `(${textElement.textContent.padStart(2, "0")})`;
+    });
+  }
+  function getById2(nodelist, id) {
+    return [...nodelist].find((el) => el.dataset.id === id);
+  }
+  function setActive(button, imageWrapper, description) {
+    button.classList.add("is-active");
+    zIndex++;
+    gsapWithCSS.set(imageWrapper, { zIndex });
+    gsapWithCSS.fromTo(
+      imageWrapper,
+      {
+        clipPath: "inset(100% 0% 0% 0%)"
+      },
+      {
+        clipPath: "inset(0% 0% 0% 0%)",
+        ease: easePrimary,
+        duration: duration2
+      }
+    );
+    gsapWithCSS.fromTo(
+      description,
+      {
+        yPercent: 50,
+        autoAlpha: 0
+      },
+      {
+        yPercent: 0,
+        autoAlpha: 1,
+        duration: duration2,
+        ease: easePrimary
+      }
+    );
+  }
+  function removeActive(id) {
+    const button = getById2(buttons, id);
+    getById2(imagesWrapper, id);
+    const description = getById2(descriptions, id);
+    button.classList.remove("is-active");
+    gsapWithCSS.to(description, {
+      yPercent: -50,
+      autoAlpha: 0,
+      duration: duration2,
+      ease: easePrimary
+    });
+  }
+})();
