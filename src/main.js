@@ -9,3 +9,4 @@ import "./components/home-hero.js";
 import "./components/projects-mask.js";
 import "./components/custom-cursor.js";
 import "./components/values.js";
+import "./components/process.js";
