@@ -8074,7 +8074,7 @@ _getGSAP3() && gsap.registerPlugin(CustomEase);
 gsapWithCSS.registerPlugin(CustomEase);
 CustomEase.create("ease-primary", "0.62, 0.05, 0.01, 0.99");
 CustomEase.create("ease-secondary", "0.16, 1, 0.35, 1");
-const duration = 1.47;
+const duration = 1.2;
 const staggerAmount = 0.2;
 const easePrimary = "ease-primary";
 const easeSecondary = "ease-secondary";
@@ -8345,35 +8345,46 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
   if (!component) return;
   const projects = component.querySelectorAll("[data-projects-mask='item']");
   const projectsAmmount = projects.length;
-  const windowHeight = isMobileDevice() ? window.screen.height : window.innerHeight;
-  if (isMobileDevice) {
-    gsapWithCSS.set(component, { height: `${projectsAmmount * windowHeight}px` });
-    gsapWithCSS.set(projects, { height: windowHeight });
-    gsapWithCSS.set(projects[0].parentElement, { height: windowHeight });
-  } else {
-    gsapWithCSS.set(component, { height: `${projectsAmmount * 100}svh` });
-  }
-  projects.forEach((project, i) => {
-    const projectOffsetY = (i - 1) * windowHeight;
-    gsapWithCSS.set(project, { zIndex: i + 1 });
-    if (i != 0) {
-      gsapWithCSS.fromTo(
-        project,
-        {
-          clipPath: "inset(100% 0% 0% 0%)"
-        },
-        {
-          clipPath: "inset(0% 0% 0% 0%)",
-          ease: "none",
-          scrollTrigger: {
-            trigger: project,
-            start: `bottom+=${projectOffsetY} bottom`,
-            end: `bottom+=${projectOffsetY} top`,
-            scrub: true
-          }
-        }
-      );
+  const getStableVH = () => {
+    if (window.visualViewport) {
+      return Math.max(window.visualViewport.height, window.innerHeight);
     }
+    return Math.max(window.innerHeight, document.documentElement.clientHeight);
+  };
+  let localTriggers = [];
+  const init4 = () => {
+    localTriggers.forEach((t) => t.kill());
+    localTriggers = [];
+    const windowHeight = getStableVH();
+    component.style.height = `${projectsAmmount * windowHeight}px`;
+    projects.forEach((project, i) => {
+      const projectOffsetY = (i - 1) * windowHeight;
+      gsapWithCSS.set(project, { zIndex: i + 1 });
+      if (i !== 0) {
+        const tween = gsapWithCSS.fromTo(
+          project,
+          {
+            clipPath: "inset(100% 0% 0% 0%)"
+          },
+          {
+            clipPath: "inset(0% 0% 0% 0%)",
+            ease: "none",
+            scrollTrigger: {
+              trigger: project,
+              start: `bottom+=${projectOffsetY} bottom`,
+              end: `bottom+=${projectOffsetY} top`,
+              scrub: true
+            }
+          }
+        );
+        localTriggers.push(tween.scrollTrigger);
+      }
+    });
+    ScrollTrigger.refresh();
+  };
+  init4();
+  window.addEventListener("resize", () => {
+    init4();
   });
 })();
 (() => {
@@ -8528,4 +8539,17 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
       ease: easePrimary
     });
   }
+})();
+(() => {
+  const component = document.querySelector("[data-component='process']");
+  if (!component) return;
+  const indexesWrapper = component.querySelectorAll(
+    "[data-process='index-wrapper']"
+  );
+  if (!indexesWrapper) return;
+  indexesWrapper.forEach((indexWrapper) => {
+    const textElement = indexWrapper.querySelector("p");
+    if (!textElement) return;
+    textElement.textContent = textElement.textContent.padStart(2, "0");
+  });
 })();
