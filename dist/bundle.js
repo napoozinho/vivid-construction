@@ -7298,13 +7298,1244 @@ lenis.on("scroll", () => {
   ScrollTrigger.update();
 });
 /*!
+ * paths 3.13.0
+ * https://gsap.com
+ *
+ * Copyright 2008-2025, GreenSock. All rights reserved.
+ * Subject to the terms at https://gsap.com/standard-license
+ * @author: Jack Doyle, jack@greensock.com
+*/
+var _svgPathExp = /[achlmqstvz]|(-?\d*\.?\d*(?:e[\-+]?\d+)?)[0-9]/ig, _scientific = /[\+\-]?\d*\.?\d+e[\+\-]?\d+/ig, _DEG2RAD = Math.PI / 180, _sin = Math.sin, _cos = Math.cos, _abs = Math.abs, _sqrt = Math.sqrt, _isNumber3 = function _isNumber4(value) {
+  return typeof value === "number";
+}, _roundingNum = 1e5, _round$1 = function _round3(value) {
+  return Math.round(value * _roundingNum) / _roundingNum || 0;
+};
+function transformRawPath(rawPath, a, b, c, d, tx, ty) {
+  var j = rawPath.length, segment, l, i, x, y;
+  while (--j > -1) {
+    segment = rawPath[j];
+    l = segment.length;
+    for (i = 0; i < l; i += 2) {
+      x = segment[i];
+      y = segment[i + 1];
+      segment[i] = x * a + y * c + tx;
+      segment[i + 1] = x * b + y * d + ty;
+    }
+  }
+  rawPath._dirty = 1;
+  return rawPath;
+}
+function arcToSegment(lastX, lastY, rx, ry, angle, largeArcFlag, sweepFlag, x, y) {
+  if (lastX === x && lastY === y) {
+    return;
+  }
+  rx = _abs(rx);
+  ry = _abs(ry);
+  var angleRad = angle % 360 * _DEG2RAD, cosAngle = _cos(angleRad), sinAngle = _sin(angleRad), PI = Math.PI, TWOPI = PI * 2, dx2 = (lastX - x) / 2, dy2 = (lastY - y) / 2, x1 = cosAngle * dx2 + sinAngle * dy2, y1 = -sinAngle * dx2 + cosAngle * dy2, x1_sq = x1 * x1, y1_sq = y1 * y1, radiiCheck = x1_sq / (rx * rx) + y1_sq / (ry * ry);
+  if (radiiCheck > 1) {
+    rx = _sqrt(radiiCheck) * rx;
+    ry = _sqrt(radiiCheck) * ry;
+  }
+  var rx_sq = rx * rx, ry_sq = ry * ry, sq = (rx_sq * ry_sq - rx_sq * y1_sq - ry_sq * x1_sq) / (rx_sq * y1_sq + ry_sq * x1_sq);
+  if (sq < 0) {
+    sq = 0;
+  }
+  var coef = (largeArcFlag === sweepFlag ? -1 : 1) * _sqrt(sq), cx1 = coef * (rx * y1 / ry), cy1 = coef * -(ry * x1 / rx), sx2 = (lastX + x) / 2, sy2 = (lastY + y) / 2, cx = sx2 + (cosAngle * cx1 - sinAngle * cy1), cy = sy2 + (sinAngle * cx1 + cosAngle * cy1), ux = (x1 - cx1) / rx, uy = (y1 - cy1) / ry, vx = (-x1 - cx1) / rx, vy = (-y1 - cy1) / ry, temp = ux * ux + uy * uy, angleStart = (uy < 0 ? -1 : 1) * Math.acos(ux / _sqrt(temp)), angleExtent = (ux * vy - uy * vx < 0 ? -1 : 1) * Math.acos((ux * vx + uy * vy) / _sqrt(temp * (vx * vx + vy * vy)));
+  isNaN(angleExtent) && (angleExtent = PI);
+  if (!sweepFlag && angleExtent > 0) {
+    angleExtent -= TWOPI;
+  } else if (sweepFlag && angleExtent < 0) {
+    angleExtent += TWOPI;
+  }
+  angleStart %= TWOPI;
+  angleExtent %= TWOPI;
+  var segments = Math.ceil(_abs(angleExtent) / (TWOPI / 4)), rawPath = [], angleIncrement = angleExtent / segments, controlLength = 4 / 3 * _sin(angleIncrement / 2) / (1 + _cos(angleIncrement / 2)), ma = cosAngle * rx, mb = sinAngle * rx, mc = sinAngle * -ry, md = cosAngle * ry, i;
+  for (i = 0; i < segments; i++) {
+    angle = angleStart + i * angleIncrement;
+    x1 = _cos(angle);
+    y1 = _sin(angle);
+    ux = _cos(angle += angleIncrement);
+    uy = _sin(angle);
+    rawPath.push(x1 - controlLength * y1, y1 + controlLength * x1, ux + controlLength * uy, uy - controlLength * ux, ux, uy);
+  }
+  for (i = 0; i < rawPath.length; i += 2) {
+    x1 = rawPath[i];
+    y1 = rawPath[i + 1];
+    rawPath[i] = x1 * ma + y1 * mc + cx;
+    rawPath[i + 1] = x1 * mb + y1 * md + cy;
+  }
+  rawPath[i - 2] = x;
+  rawPath[i - 1] = y;
+  return rawPath;
+}
+function stringToRawPath(d) {
+  var a = (d + "").replace(_scientific, function(m) {
+    var n = +m;
+    return n < 1e-4 && n > -1e-4 ? 0 : n;
+  }).match(_svgPathExp) || [], path = [], relativeX = 0, relativeY = 0, twoThirds = 2 / 3, elements = a.length, points = 0, errorMessage = "ERROR: malformed path: " + d, i, j, x, y, command, isRelative, segment, startX, startY, difX, difY, beziers, prevCommand, flag1, flag2, line = function line2(sx, sy, ex, ey) {
+    difX = (ex - sx) / 3;
+    difY = (ey - sy) / 3;
+    segment.push(sx + difX, sy + difY, ex - difX, ey - difY, ex, ey);
+  };
+  if (!d || !isNaN(a[0]) || isNaN(a[1])) {
+    console.log(errorMessage);
+    return path;
+  }
+  for (i = 0; i < elements; i++) {
+    prevCommand = command;
+    if (isNaN(a[i])) {
+      command = a[i].toUpperCase();
+      isRelative = command !== a[i];
+    } else {
+      i--;
+    }
+    x = +a[i + 1];
+    y = +a[i + 2];
+    if (isRelative) {
+      x += relativeX;
+      y += relativeY;
+    }
+    if (!i) {
+      startX = x;
+      startY = y;
+    }
+    if (command === "M") {
+      if (segment) {
+        if (segment.length < 8) {
+          path.length -= 1;
+        } else {
+          points += segment.length;
+        }
+      }
+      relativeX = startX = x;
+      relativeY = startY = y;
+      segment = [x, y];
+      path.push(segment);
+      i += 2;
+      command = "L";
+    } else if (command === "C") {
+      if (!segment) {
+        segment = [0, 0];
+      }
+      if (!isRelative) {
+        relativeX = relativeY = 0;
+      }
+      segment.push(x, y, relativeX + a[i + 3] * 1, relativeY + a[i + 4] * 1, relativeX += a[i + 5] * 1, relativeY += a[i + 6] * 1);
+      i += 6;
+    } else if (command === "S") {
+      difX = relativeX;
+      difY = relativeY;
+      if (prevCommand === "C" || prevCommand === "S") {
+        difX += relativeX - segment[segment.length - 4];
+        difY += relativeY - segment[segment.length - 3];
+      }
+      if (!isRelative) {
+        relativeX = relativeY = 0;
+      }
+      segment.push(difX, difY, x, y, relativeX += a[i + 3] * 1, relativeY += a[i + 4] * 1);
+      i += 4;
+    } else if (command === "Q") {
+      difX = relativeX + (x - relativeX) * twoThirds;
+      difY = relativeY + (y - relativeY) * twoThirds;
+      if (!isRelative) {
+        relativeX = relativeY = 0;
+      }
+      relativeX += a[i + 3] * 1;
+      relativeY += a[i + 4] * 1;
+      segment.push(difX, difY, relativeX + (x - relativeX) * twoThirds, relativeY + (y - relativeY) * twoThirds, relativeX, relativeY);
+      i += 4;
+    } else if (command === "T") {
+      difX = relativeX - segment[segment.length - 4];
+      difY = relativeY - segment[segment.length - 3];
+      segment.push(relativeX + difX, relativeY + difY, x + (relativeX + difX * 1.5 - x) * twoThirds, y + (relativeY + difY * 1.5 - y) * twoThirds, relativeX = x, relativeY = y);
+      i += 2;
+    } else if (command === "H") {
+      line(relativeX, relativeY, relativeX = x, relativeY);
+      i += 1;
+    } else if (command === "V") {
+      line(relativeX, relativeY, relativeX, relativeY = x + (isRelative ? relativeY - relativeX : 0));
+      i += 1;
+    } else if (command === "L" || command === "Z") {
+      if (command === "Z") {
+        x = startX;
+        y = startY;
+        segment.closed = true;
+      }
+      if (command === "L" || _abs(relativeX - x) > 0.5 || _abs(relativeY - y) > 0.5) {
+        line(relativeX, relativeY, x, y);
+        if (command === "L") {
+          i += 2;
+        }
+      }
+      relativeX = x;
+      relativeY = y;
+    } else if (command === "A") {
+      flag1 = a[i + 4];
+      flag2 = a[i + 5];
+      difX = a[i + 6];
+      difY = a[i + 7];
+      j = 7;
+      if (flag1.length > 1) {
+        if (flag1.length < 3) {
+          difY = difX;
+          difX = flag2;
+          j--;
+        } else {
+          difY = flag2;
+          difX = flag1.substr(2);
+          j -= 2;
+        }
+        flag2 = flag1.charAt(1);
+        flag1 = flag1.charAt(0);
+      }
+      beziers = arcToSegment(relativeX, relativeY, +a[i + 1], +a[i + 2], +a[i + 3], +flag1, +flag2, (isRelative ? relativeX : 0) + difX * 1, (isRelative ? relativeY : 0) + difY * 1);
+      i += j;
+      if (beziers) {
+        for (j = 0; j < beziers.length; j++) {
+          segment.push(beziers[j]);
+        }
+      }
+      relativeX = segment[segment.length - 2];
+      relativeY = segment[segment.length - 1];
+    } else {
+      console.log(errorMessage);
+    }
+  }
+  i = segment.length;
+  if (i < 6) {
+    path.pop();
+    i = 0;
+  } else if (segment[0] === segment[i - 2] && segment[1] === segment[i - 1]) {
+    segment.closed = true;
+  }
+  path.totalPoints = points + i;
+  return path;
+}
+function rawPathToString(rawPath) {
+  if (_isNumber3(rawPath[0])) {
+    rawPath = [rawPath];
+  }
+  var result = "", l = rawPath.length, sl, s, i, segment;
+  for (s = 0; s < l; s++) {
+    segment = rawPath[s];
+    result += "M" + _round$1(segment[0]) + "," + _round$1(segment[1]) + " C";
+    sl = segment.length;
+    for (i = 2; i < sl; i++) {
+      result += _round$1(segment[i++]) + "," + _round$1(segment[i++]) + " " + _round$1(segment[i++]) + "," + _round$1(segment[i++]) + " " + _round$1(segment[i++]) + "," + _round$1(segment[i]) + " ";
+    }
+    if (segment.closed) {
+      result += "z";
+    }
+  }
+  return result;
+}
+/*!
+ * CustomEase 3.13.0
+ * https://gsap.com
+ *
+ * @license Copyright 2008-2025, GreenSock. All rights reserved.
+ * Subject to the terms at https://gsap.com/standard-license
+ * @author: Jack Doyle, jack@greensock.com
+*/
+var gsap$1, _coreInitted$1, _getGSAP3 = function _getGSAP4() {
+  return gsap$1 || typeof window !== "undefined" && (gsap$1 = window.gsap) && gsap$1.registerPlugin && gsap$1;
+}, _initCore3 = function _initCore4() {
+  gsap$1 = _getGSAP3();
+  if (gsap$1) {
+    gsap$1.registerEase("_CE", CustomEase.create);
+    _coreInitted$1 = 1;
+  } else {
+    console.warn("Please gsap.registerPlugin(CustomEase)");
+  }
+}, _bigNum = 1e20, _round4 = function _round5(value) {
+  return ~~(value * 1e3 + (value < 0 ? -0.5 : 0.5)) / 1e3;
+}, _numExp = /[-+=.]*\d+[.e\-+]*\d*[e\-+]*\d*/gi, _needsParsingExp = /[cLlsSaAhHvVtTqQ]/g, _findMinimum = function _findMinimum2(values) {
+  var l = values.length, min = _bigNum, i;
+  for (i = 1; i < l; i += 6) {
+    +values[i] < min && (min = +values[i]);
+  }
+  return min;
+}, _normalize = function _normalize2(values, height, originY) {
+  if (!originY && originY !== 0) {
+    originY = Math.max(+values[values.length - 1], +values[1]);
+  }
+  var tx = +values[0] * -1, ty = -originY, l = values.length, sx = 1 / (+values[l - 2] + tx), sy = -height || (Math.abs(+values[l - 1] - +values[1]) < 0.01 * (+values[l - 2] - +values[0]) ? _findMinimum(values) + ty : +values[l - 1] + ty), i;
+  if (sy) {
+    sy = 1 / sy;
+  } else {
+    sy = -sx;
+  }
+  for (i = 0; i < l; i += 2) {
+    values[i] = (+values[i] + tx) * sx;
+    values[i + 1] = (+values[i + 1] + ty) * sy;
+  }
+}, _bezierToPoints = function _bezierToPoints2(x1, y1, x2, y2, x3, y3, x4, y4, threshold, points, index) {
+  var x12 = (x1 + x2) / 2, y12 = (y1 + y2) / 2, x23 = (x2 + x3) / 2, y23 = (y2 + y3) / 2, x34 = (x3 + x4) / 2, y34 = (y3 + y4) / 2, x123 = (x12 + x23) / 2, y123 = (y12 + y23) / 2, x234 = (x23 + x34) / 2, y234 = (y23 + y34) / 2, x1234 = (x123 + x234) / 2, y1234 = (y123 + y234) / 2, dx = x4 - x1, dy = y4 - y1, d2 = Math.abs((x2 - x4) * dy - (y2 - y4) * dx), d3 = Math.abs((x3 - x4) * dy - (y3 - y4) * dx), length;
+  if (!points) {
+    points = [{
+      x: x1,
+      y: y1
+    }, {
+      x: x4,
+      y: y4
+    }];
+    index = 1;
+  }
+  points.splice(index || points.length - 1, 0, {
+    x: x1234,
+    y: y1234
+  });
+  if ((d2 + d3) * (d2 + d3) > threshold * (dx * dx + dy * dy)) {
+    length = points.length;
+    _bezierToPoints2(x1, y1, x12, y12, x123, y123, x1234, y1234, threshold, points, index);
+    _bezierToPoints2(x1234, y1234, x234, y234, x34, y34, x4, y4, threshold, points, index + 1 + (points.length - length));
+  }
+  return points;
+};
+var CustomEase = /* @__PURE__ */ function() {
+  function CustomEase2(id, data, config3) {
+    _coreInitted$1 || _initCore3();
+    this.id = id;
+    this.setData(data, config3);
+  }
+  var _proto = CustomEase2.prototype;
+  _proto.setData = function setData(data, config3) {
+    config3 = config3 || {};
+    data = data || "0,0,1,1";
+    var values = data.match(_numExp), closest = 1, points = [], lookup = [], precision = config3.precision || 1, fast = precision <= 1, l, a1, a2, i, inc, j, point, prevPoint, p;
+    this.data = data;
+    if (_needsParsingExp.test(data) || ~data.indexOf("M") && data.indexOf("C") < 0) {
+      values = stringToRawPath(data)[0];
+    }
+    l = values.length;
+    if (l === 4) {
+      values.unshift(0, 0);
+      values.push(1, 1);
+      l = 8;
+    } else if ((l - 2) % 6) {
+      throw "Invalid CustomEase";
+    }
+    if (+values[0] !== 0 || +values[l - 2] !== 1) {
+      _normalize(values, config3.height, config3.originY);
+    }
+    this.segment = values;
+    for (i = 2; i < l; i += 6) {
+      a1 = {
+        x: +values[i - 2],
+        y: +values[i - 1]
+      };
+      a2 = {
+        x: +values[i + 4],
+        y: +values[i + 5]
+      };
+      points.push(a1, a2);
+      _bezierToPoints(a1.x, a1.y, +values[i], +values[i + 1], +values[i + 2], +values[i + 3], a2.x, a2.y, 1 / (precision * 2e5), points, points.length - 1);
+    }
+    l = points.length;
+    for (i = 0; i < l; i++) {
+      point = points[i];
+      prevPoint = points[i - 1] || point;
+      if ((point.x > prevPoint.x || prevPoint.y !== point.y && prevPoint.x === point.x || point === prevPoint) && point.x <= 1) {
+        prevPoint.cx = point.x - prevPoint.x;
+        prevPoint.cy = point.y - prevPoint.y;
+        prevPoint.n = point;
+        prevPoint.nx = point.x;
+        if (fast && i > 1 && Math.abs(prevPoint.cy / prevPoint.cx - points[i - 2].cy / points[i - 2].cx) > 2) {
+          fast = 0;
+        }
+        if (prevPoint.cx < closest) {
+          if (!prevPoint.cx) {
+            prevPoint.cx = 1e-3;
+            if (i === l - 1) {
+              prevPoint.x -= 1e-3;
+              closest = Math.min(closest, 1e-3);
+              fast = 0;
+            }
+          } else {
+            closest = prevPoint.cx;
+          }
+        }
+      } else {
+        points.splice(i--, 1);
+        l--;
+      }
+    }
+    l = 1 / closest + 1 | 0;
+    inc = 1 / l;
+    j = 0;
+    point = points[0];
+    if (fast) {
+      for (i = 0; i < l; i++) {
+        p = i * inc;
+        if (point.nx < p) {
+          point = points[++j];
+        }
+        a1 = point.y + (p - point.x) / point.cx * point.cy;
+        lookup[i] = {
+          x: p,
+          cx: inc,
+          y: a1,
+          cy: 0,
+          nx: 9
+        };
+        if (i) {
+          lookup[i - 1].cy = a1 - lookup[i - 1].y;
+        }
+      }
+      j = points[points.length - 1];
+      lookup[l - 1].cy = j.y - a1;
+      lookup[l - 1].cx = j.x - lookup[lookup.length - 1].x;
+    } else {
+      for (i = 0; i < l; i++) {
+        if (point.nx < i * inc) {
+          point = points[++j];
+        }
+        lookup[i] = point;
+      }
+      if (j < points.length - 1) {
+        lookup[i - 1] = points[points.length - 2];
+      }
+    }
+    this.ease = function(p2) {
+      var point2 = lookup[p2 * l | 0] || lookup[l - 1];
+      if (point2.nx < p2) {
+        point2 = point2.n;
+      }
+      return point2.y + (p2 - point2.x) / point2.cx * point2.cy;
+    };
+    this.ease.custom = this;
+    this.id && gsap$1 && gsap$1.registerEase(this.id, this.ease);
+    return this;
+  };
+  _proto.getSVGData = function getSVGData(config3) {
+    return CustomEase2.getSVGData(this, config3);
+  };
+  CustomEase2.create = function create(id, data, config3) {
+    return new CustomEase2(id, data, config3).ease;
+  };
+  CustomEase2.register = function register(core) {
+    gsap$1 = core;
+    _initCore3();
+  };
+  CustomEase2.get = function get(id) {
+    return gsap$1.parseEase(id);
+  };
+  CustomEase2.getSVGData = function getSVGData(ease, config3) {
+    config3 = config3 || {};
+    var width = config3.width || 100, height = config3.height || 100, x = config3.x || 0, y = (config3.y || 0) + height, e = gsap$1.utils.toArray(config3.path)[0], a, slope, i, inc, tx, ty, precision, threshold, prevX, prevY;
+    if (config3.invert) {
+      height = -height;
+      y = 0;
+    }
+    if (typeof ease === "string") {
+      ease = gsap$1.parseEase(ease);
+    }
+    if (ease.custom) {
+      ease = ease.custom;
+    }
+    if (ease instanceof CustomEase2) {
+      a = rawPathToString(transformRawPath([ease.segment], width, 0, 0, -height, x, y));
+    } else {
+      a = [x, y];
+      precision = Math.max(5, (config3.precision || 1) * 200);
+      inc = 1 / precision;
+      precision += 2;
+      threshold = 5 / precision;
+      prevX = _round4(x + inc * width);
+      prevY = _round4(y + ease(inc) * -height);
+      slope = (prevY - y) / (prevX - x);
+      for (i = 2; i < precision; i++) {
+        tx = _round4(x + i * inc * width);
+        ty = _round4(y + ease(i * inc) * -height);
+        if (Math.abs((ty - prevY) / (tx - prevX) - slope) > threshold || i === precision - 1) {
+          a.push(prevX, prevY);
+          slope = (ty - prevY) / (tx - prevX);
+        }
+        prevX = tx;
+        prevY = ty;
+      }
+      a = "M" + a.join(",");
+    }
+    e && e.setAttribute("d", a);
+    return a;
+  };
+  return CustomEase2;
+}();
+CustomEase.version = "3.13.0";
+CustomEase.headless = true;
+_getGSAP3() && gsap$1.registerPlugin(CustomEase);
+gsapWithCSS.registerPlugin(CustomEase);
+CustomEase.create("ease-primary", "0.62, 0.05, 0.01, 0.99");
+CustomEase.create("ease-secondary", "0.16, 1, 0.35, 1");
+const duration = 1.2;
+const staggerAmount = 0.2;
+const easePrimary = "ease-primary";
+const easeSecondary = "ease-secondary";
+gsapWithCSS.registerPlugin(ScrollTrigger);
+(() => {
+  const navbar = document.querySelector("[data-component='navbar']");
+  if (!navbar) return;
+  const logo = navbar.querySelector("[data-navbar='logo-link']");
+  const menu = navbar.querySelector("[data-navbar='menu']").children;
+  const button = navbar.querySelector(".navbar-button_component");
+  const menuButtonWrapper = navbar.querySelector(
+    "[data-navbar='menu-button']"
+  ).parentElement;
+  let visibleElements = [];
+  visibleElements = window.innerWidth > 991 ? [logo, ...menu, button] : [logo, button, menuButtonWrapper];
+  animateNavbar(visibleElements);
+  const blendModeSections = document.querySelectorAll(
+    "[data-navbar-blend-mode='false']"
+  );
+  if (blendModeSections.length) {
+    const navbarHeight = navbar.offsetHeight;
+    const setNormal = () => gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
+    const setDifference = () => gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
+    blendModeSections.forEach((section) => {
+      ScrollTrigger.create({
+        trigger: section,
+        start: `top-=${navbarHeight / 2} top`,
+        end: `bottom top+=${navbarHeight / 2}`,
+        onEnter: setNormal,
+        onEnterBack: setNormal,
+        onLeave: setDifference,
+        onLeaveBack: setDifference
+      });
+    });
+  }
+  let navOverlay;
+  const intervalId = setInterval(() => {
+    navOverlay = document.querySelector(".w-nav-overlay");
+    if (navOverlay) {
+      clearInterval(intervalId);
+      navOverlay.addEventListener("click", () => {
+        lenis.start();
+      });
+    }
+  }, 100);
+  function animateNavbar(elements) {
+    let delay = 0;
+    if (window.location.pathname === "/") {
+      delay = 3.5;
+    }
+    gsapWithCSS.set(navbar, { autoAlpha: 1 });
+    gsapWithCSS.set(elements, {
+      y: "-5rem"
+    });
+    gsapWithCSS.to(elements, {
+      y: 0,
+      duration: 1,
+      delay,
+      stagger: 0.05,
+      ease: easeSecondary
+    });
+  }
+})();
+(() => {
+  const links = document.querySelectorAll('[data-component="link-reveal"]');
+  if (links.length <= 0) return;
+  const projectList = document.querySelector("[data-projects-list]");
+  let totalProjects = 0;
+  if (projectList) totalProjects = projectList.childElementCount;
+  const duration2 = 0.54;
+  links.forEach((link) => {
+    const textElements = link.querySelectorAll("[data-link-reveal='text']");
+    link.addEventListener("mouseenter", () => animate(textElements, -100));
+    link.addEventListener("mouseleave", () => animate(textElements, 0));
+    const superscript = link.querySelector(
+      "[data-link-reveal='project-count']"
+    );
+    if (superscript) {
+      if (totalProjects > 0) {
+        superscript.textContent = `(${totalProjects})`;
+      } else {
+        superscript.remove();
+      }
+    }
+  });
+  function animate(elements, yPercent) {
+    gsapWithCSS.to(elements, {
+      yPercent,
+      duration: duration2,
+      ease: easeSecondary
+    });
+  }
+})();
+(() => {
+  const component2 = document.querySelectorAll("[data-image-reveal]");
+  if (component2.length === 0) return;
+  component2.forEach((wrapper) => {
+    const image = wrapper.querySelector("img");
+    const blind = wrapper.querySelector("[data-image-blind]");
+    gsapWithCSS.set(image, { scale: 1.05 });
+    const reveal = gsapWithCSS.timeline({
+      scrollTrigger: {
+        trigger: wrapper,
+        start: "top 90%",
+        toggleActions: "play none none reverse"
+      }
+    });
+    if (blind) {
+      reveal.to(blind, {
+        opacity: 0,
+        duration: 0.6
+      });
+      reveal.to(
+        image,
+        {
+          scale: 1,
+          duration: 1.2,
+          ease: easeSecondary
+        },
+        0
+      );
+    }
+  });
+})();
+(() => {
+  document.querySelectorAll("[data-join]").forEach((wrapper) => {
+    const sep = wrapper.getAttribute("data-join");
+    const children = Array.from(wrapper.children);
+    if (children.length > 1) {
+      const first = children[0];
+      const joined = children.map((el) => el.textContent.trim()).join(sep);
+      first.textContent = joined;
+      children.slice(1).forEach((el) => el.remove());
+    }
+  });
+})();
+function isMobileDevice() {
+  return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  ) || window.innerWidth <= 768 && window.innerHeight <= 1024;
+}
+(() => {
+  const component2 = document.querySelector("[data-component='home-hero']");
+  if (!component2) return;
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+  if (isMobileDevice()) {
+    gsapWithCSS.set(component2, { height: window.innerHeight });
+  }
+  setTimeout(() => {
+    lenis.scrollTo(0, { duration: 0.01, force: true });
+  }, 100);
+  const curtain = component2.querySelector("[data-home-hero='curtain']");
+  const logo = component2.querySelector("[data-home-hero='logo']");
+  const number = component2.querySelector("[data-home-hero='number']");
+  const bar = component2.querySelector("[data-home-hero='bar']");
+  const image = component2.querySelector("[data-home-hero='background-image']");
+  const texts = component2.querySelectorAll("p");
+  const loadingSteps = [
+    { progress: 66, duration: 1.5, ease: "power1.in" },
+    { progress: 100, duration: 0.6, ease: "power1.in" }
+  ];
+  gsapWithCSS.set(logo, { autoAlpha: 1 });
+  gsapWithCSS.fromTo(
+    logo,
+    { clipPath: "inset(0% 100% 0% 0%)" },
+    { clipPath: "inset(0% 0% 0% 0%)", duration: 1 }
+  );
+  const animateNumber = (target, steps) => {
+    const tl = gsapWithCSS.timeline();
+    steps.forEach((step) => {
+      tl.to(target, {
+        textContent: step.progress,
+        duration: step.duration,
+        ease: step.ease,
+        snap: { textContent: 1 },
+        onUpdate() {
+          target.textContent = Math.round(this.targets()[0].textContent);
+        }
+      });
+    });
+    return tl;
+  };
+  const animateBar = (target, steps, onComplete) => {
+    const tl = gsapWithCSS.timeline({ onComplete });
+    steps.forEach((step) => {
+      tl.to(target, {
+        width: `${step.progress}%`,
+        duration: step.duration,
+        ease: step.ease
+      });
+    });
+    return tl;
+  };
+  const curtainTL = gsapWithCSS.timeline({ paused: true }).to(curtain, {
+    clipPath: "inset(0% 0% 100% 0%)",
+    ease: "power4.out",
+    duration: 2
+  });
+  const imageTL = gsapWithCSS.timeline({ paused: true });
+  imageTL.from(image, {
+    scale: 1.05,
+    webkitFilter: `blur(5px)`,
+    filter: `blur(5px)`,
+    ease: "power3.inOut",
+    duration: 1.5
+  });
+  imageTL.add(() => {
+    texts.forEach((text, i) => {
+      const lines = text.querySelectorAll(".line");
+      gsapWithCSS.set(text, { autoAlpha: 1 });
+      gsapWithCSS.timeline({ delay: i * 0.3 }).from(lines, {
+        yPercent: 100,
+        duration,
+        ease: easePrimary,
+        stagger: { amount: staggerAmount }
+      });
+    });
+  }, imageTL.duration() * 0.5);
+  animateNumber(number, loadingSteps);
+  animateBar(bar, loadingSteps, () => {
+    curtainTL.play();
+    imageTL.play();
+  });
+})();
+gsapWithCSS.registerPlugin(ScrollTrigger);
+(() => {
+  const component2 = document.querySelector("[data-component='projects-mask']");
+  if (!component2) return;
+  const projects = component2.querySelectorAll("[data-projects-mask='item']");
+  const projectsAmmount = projects.length;
+  const getStableVH = () => {
+    if (window.visualViewport) {
+      return Math.max(window.visualViewport.height, window.innerHeight);
+    }
+    return Math.max(window.innerHeight, document.documentElement.clientHeight);
+  };
+  let localTriggers = [];
+  const init4 = () => {
+    localTriggers.forEach((t) => t.kill());
+    localTriggers = [];
+    const windowHeight = getStableVH();
+    component2.style.height = `${projectsAmmount * windowHeight}px`;
+    projects.forEach((project, i) => {
+      const projectOffsetY = (i - 1) * windowHeight;
+      gsapWithCSS.set(project, { zIndex: i + 1 });
+      if (i !== 0) {
+        const tween = gsapWithCSS.fromTo(
+          project,
+          {
+            clipPath: "inset(100% 0% 0% 0%)"
+          },
+          {
+            clipPath: "inset(0% 0% 0% 0%)",
+            ease: "none",
+            scrollTrigger: {
+              trigger: project,
+              start: `bottom+=${projectOffsetY} bottom`,
+              end: `bottom+=${projectOffsetY} top`,
+              scrub: true
+            }
+          }
+        );
+        localTriggers.push(tween.scrollTrigger);
+      }
+    });
+    ScrollTrigger.refresh();
+  };
+  init4();
+  window.addEventListener("resize", () => {
+    init4();
+  });
+})();
+(() => {
+  const component2 = document.querySelector("[data-custom-cursor]");
+  if (!component2 || !window.matchMedia("(pointer: fine)").matches) return;
+  gsapWithCSS.set(component2, { autoAlpha: 0, scale: 0 });
+  var cursorTriggers = document.querySelectorAll(
+    "[data-custom-cursor-trigger]"
+  );
+  var cursorWidth = component2.offsetWidth;
+  var cursorHeight = component2.offsetHeight;
+  var watchCursor = function watchCursor2(e) {
+    var x = e.clientX;
+    var y = e.clientY;
+    component2.style.left = x - cursorWidth / 2 + "px";
+    component2.style.top = y - cursorHeight / 2 + "px";
+  };
+  document.addEventListener("pointermove", watchCursor);
+  let hideTween;
+  cursorTriggers.forEach(function(trigger) {
+    trigger.addEventListener("mouseenter", function() {
+      if (hideTween) {
+        hideTween.kill();
+        hideTween = null;
+      }
+      gsapWithCSS.set(trigger.querySelectorAll("*"), { cursor: "none" });
+      gsapWithCSS.set(component2, { autoAlpha: 1 });
+      gsapWithCSS.to(component2, {
+        scale: 1,
+        duration: 0.2
+      });
+    });
+    trigger.addEventListener("mouseleave", function() {
+      gsapWithCSS.set("*", { clearProps: "cursor" });
+      hideTween = gsapWithCSS.to(component2, {
+        scale: 0,
+        duration: 0.2,
+        onComplete: () => {
+          gsapWithCSS.set(component2, { autoAlpha: 0 });
+          hideTween = null;
+        }
+      });
+    });
+  });
+})();
+gsapWithCSS.registerPlugin(ScrollTrigger);
+(() => {
+  const component2 = document.querySelector("[data-component='values']");
+  if (!component2) return;
+  const imagesWrapper = component2.querySelectorAll(
+    "[data-values='image-wrapper']"
+  );
+  const buttons = component2.querySelectorAll("[data-values='button']");
+  const descriptions = component2.querySelectorAll(
+    "[data-values='description']"
+  );
+  if (!imagesWrapper || !buttons || !descriptions) return;
+  const duration2 = 1;
+  let zIndex = 0;
+  initSetup();
+  buttons.forEach((button) => {
+    button.addEventListener("click", (e) => {
+      const id = e.currentTarget.dataset.id;
+      triggerTab(id);
+    });
+  });
+  ScrollTrigger.create({
+    trigger: buttons[0],
+    start: "top bottom",
+    onEnter: () => buttons[0].click()
+  });
+  function triggerTab(id) {
+    const currentlyActiveButton = [...buttons].find(
+      (el) => el.classList.contains("is-active")
+    );
+    let currentlyActiveId = null;
+    if (currentlyActiveButton) {
+      currentlyActiveId = currentlyActiveButton.dataset.id;
+    }
+    const button = getById2(buttons, id);
+    if (button.classList.contains("is-active")) return;
+    const imageWrapper = getById2(imagesWrapper, id);
+    const description = getById2(descriptions, id);
+    if (currentlyActiveId) removeActive(currentlyActiveId);
+    setActive(button, imageWrapper, description);
+  }
+  function initSetup() {
+    buttons.forEach((button, i) => {
+      button.classList.remove("is-active");
+      const index = button.querySelector(
+        "[data-values='button-index-wrapper']"
+      );
+      if (!index) return;
+      const textElement = index.querySelector("p");
+      if (!textElement) return;
+      textElement.textContent = `(${textElement.textContent.padStart(2, "0")})`;
+    });
+    gsapWithCSS.set(imagesWrapper, { clipPath: "inset(100% 0% 0% 0%)" });
+    gsapWithCSS.set(descriptions, {
+      yPercent: 50,
+      autoAlpha: 0
+    });
+    const indexesMobile = document.querySelectorAll(
+      "[data-value-index-mobile]"
+    );
+    indexesMobile.forEach((index) => {
+      const textElement = index.firstChild;
+      textElement.textContent = `(${textElement.textContent.padStart(2, "0")})`;
+    });
+  }
+  function getById2(nodelist, id) {
+    return [...nodelist].find((el) => el.dataset.id === id);
+  }
+  function setActive(button, imageWrapper, description) {
+    button.classList.add("is-active");
+    zIndex++;
+    gsapWithCSS.set(imageWrapper, { zIndex });
+    gsapWithCSS.fromTo(
+      imageWrapper,
+      {
+        clipPath: "inset(100% 0% 0% 0%)"
+      },
+      {
+        clipPath: "inset(0% 0% 0% 0%)",
+        ease: easePrimary,
+        duration: duration2
+      }
+    );
+    gsapWithCSS.fromTo(
+      description,
+      {
+        yPercent: 50,
+        autoAlpha: 0
+      },
+      {
+        yPercent: 0,
+        autoAlpha: 1,
+        duration: duration2,
+        ease: easePrimary
+      }
+    );
+  }
+  function removeActive(id) {
+    const button = getById2(buttons, id);
+    getById2(imagesWrapper, id);
+    const description = getById2(descriptions, id);
+    button.classList.remove("is-active");
+    gsapWithCSS.to(description, {
+      yPercent: -50,
+      autoAlpha: 0,
+      duration: duration2,
+      ease: easePrimary
+    });
+  }
+})();
+(() => {
+  const component2 = document.querySelector("[data-component='process']");
+  if (!component2) return;
+  const indexesWrapper = component2.querySelectorAll(
+    "[data-process='index-wrapper']"
+  );
+  if (!indexesWrapper) return;
+  indexesWrapper.forEach((indexWrapper) => {
+    const textElement = indexWrapper.querySelector("p");
+    if (!textElement) return;
+    textElement.textContent = textElement.textContent.padStart(2, "0");
+  });
+})();
+function getDefaultExportFromCjs(x) {
+  return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
+}
+var macy$1 = { exports: {} };
+var macy = macy$1.exports;
+var hasRequiredMacy;
+function requireMacy() {
+  if (hasRequiredMacy) return macy$1.exports;
+  hasRequiredMacy = 1;
+  (function(module, exports) {
+    !function(t, n) {
+      module.exports = n();
+    }(macy, function() {
+      function t(t2, n2) {
+        var e2 = void 0;
+        return function() {
+          e2 && clearTimeout(e2), e2 = setTimeout(t2, n2);
+        };
+      }
+      function n(t2, n2) {
+        for (var e2 = t2.length, r2 = e2, o2 = []; e2--; ) o2.push(n2(t2[r2 - e2 - 1]));
+        return o2;
+      }
+      function e(t2, n2) {
+        var e2 = arguments.length > 2 && void 0 !== arguments[2] && arguments[2];
+        if (window.Promise) return A(t2, n2, e2);
+        t2.recalculate(true, true);
+      }
+      function r(t2) {
+        for (var n2 = t2.options, e2 = t2.responsiveOptions, r2 = t2.keys, o2 = t2.docWidth, i2 = void 0, s2 = 0; s2 < r2.length; s2++) {
+          var a2 = parseInt(r2[s2], 10);
+          o2 >= a2 && (i2 = n2.breakAt[a2], O(i2, e2));
+        }
+        return e2;
+      }
+      function o(t2) {
+        for (var n2 = t2.options, e2 = t2.responsiveOptions, r2 = t2.keys, o2 = t2.docWidth, i2 = void 0, s2 = r2.length - 1; s2 >= 0; s2--) {
+          var a2 = parseInt(r2[s2], 10);
+          o2 <= a2 && (i2 = n2.breakAt[a2], O(i2, e2));
+        }
+        return e2;
+      }
+      function i(t2) {
+        var n2 = t2.useContainerForBreakpoints ? t2.container.clientWidth : window.innerWidth, e2 = { columns: t2.columns };
+        b(t2.margin) ? e2.margin = { x: t2.margin.x, y: t2.margin.y } : e2.margin = { x: t2.margin, y: t2.margin };
+        var i2 = Object.keys(t2.breakAt);
+        return t2.mobileFirst ? r({ options: t2, responsiveOptions: e2, keys: i2, docWidth: n2 }) : o({ options: t2, responsiveOptions: e2, keys: i2, docWidth: n2 });
+      }
+      function s(t2) {
+        return i(t2).columns;
+      }
+      function a(t2) {
+        return i(t2).margin;
+      }
+      function c(t2) {
+        var n2 = !(arguments.length > 1 && void 0 !== arguments[1]) || arguments[1], e2 = s(t2), r2 = a(t2).x, o2 = 100 / e2;
+        if (!n2) return o2;
+        if (1 === e2) return "100%";
+        var i2 = "px";
+        if ("string" == typeof r2) {
+          var c2 = parseFloat(r2);
+          i2 = r2.replace(c2, ""), r2 = c2;
+        }
+        return r2 = (e2 - 1) * r2 / e2, "%" === i2 ? o2 - r2 + "%" : "calc(" + o2 + "% - " + r2 + i2 + ")";
+      }
+      function u(t2, n2) {
+        var e2 = s(t2.options), r2 = 0, o2 = void 0, i2 = void 0;
+        if (1 === ++n2) return 0;
+        i2 = a(t2.options).x;
+        var u2 = "px";
+        if ("string" == typeof i2) {
+          var l2 = parseFloat(i2, 10);
+          u2 = i2.replace(l2, ""), i2 = l2;
+        }
+        return o2 = (i2 - (e2 - 1) * i2 / e2) * (n2 - 1), r2 += c(t2.options, false) * (n2 - 1), "%" === u2 ? r2 + o2 + "%" : "calc(" + r2 + "% + " + o2 + u2 + ")";
+      }
+      function l(t2) {
+        var n2 = 0, e2 = t2.container, r2 = t2.rows;
+        v(r2, function(t3) {
+          n2 = t3 > n2 ? t3 : n2;
+        }), e2.style.height = n2 + "px";
+      }
+      function p(t2, n2) {
+        var e2 = arguments.length > 2 && void 0 !== arguments[2] && arguments[2], r2 = !(arguments.length > 3 && void 0 !== arguments[3]) || arguments[3], o2 = s(t2.options), i2 = a(t2.options).y;
+        M(t2, o2, e2), v(n2, function(n3) {
+          var e3 = 0, o3 = parseInt(n3.offsetHeight, 10);
+          isNaN(o3) || (t2.rows.forEach(function(n4, r3) {
+            n4 < t2.rows[e3] && (e3 = r3);
+          }), n3.style.position = "absolute", n3.style.top = t2.rows[e3] + "px", n3.style.left = "" + t2.cols[e3], t2.rows[e3] += isNaN(o3) ? 0 : o3 + i2, r2 && (n3.dataset.macyComplete = 1));
+        }), r2 && (t2.tmpRows = null), l(t2);
+      }
+      function f(t2, n2) {
+        var e2 = arguments.length > 2 && void 0 !== arguments[2] && arguments[2], r2 = !(arguments.length > 3 && void 0 !== arguments[3]) || arguments[3], o2 = s(t2.options), i2 = a(t2.options).y;
+        M(t2, o2, e2), v(n2, function(n3) {
+          t2.lastcol === o2 && (t2.lastcol = 0);
+          var e3 = C(n3, "height");
+          e3 = parseInt(n3.offsetHeight, 10), isNaN(e3) || (n3.style.position = "absolute", n3.style.top = t2.rows[t2.lastcol] + "px", n3.style.left = "" + t2.cols[t2.lastcol], t2.rows[t2.lastcol] += isNaN(e3) ? 0 : e3 + i2, t2.lastcol += 1, r2 && (n3.dataset.macyComplete = 1));
+        }), r2 && (t2.tmpRows = null), l(t2);
+      }
+      var h = function t2(n2, e2) {
+        if (!(this instanceof t2)) return new t2(n2, e2);
+        if (n2 && n2.nodeName) return n2;
+        if (n2 = n2.replace(/^\s*/, "").replace(/\s*$/, ""), e2) return this.byCss(n2, e2);
+        for (var r2 in this.selectors) if (e2 = r2.split("/"), new RegExp(e2[1], e2[2]).test(n2)) return this.selectors[r2](n2);
+        return this.byCss(n2);
+      };
+      h.prototype.byCss = function(t2, n2) {
+        return (n2 || document).querySelectorAll(t2);
+      }, h.prototype.selectors = {}, h.prototype.selectors[/^\.[\w\-]+$/] = function(t2) {
+        return document.getElementsByClassName(t2.substring(1));
+      }, h.prototype.selectors[/^\w+$/] = function(t2) {
+        return document.getElementsByTagName(t2);
+      }, h.prototype.selectors[/^\#[\w\-]+$/] = function(t2) {
+        return document.getElementById(t2.substring(1));
+      };
+      var v = function(t2, n2) {
+        for (var e2 = t2.length, r2 = e2; e2--; ) n2(t2[r2 - e2 - 1]);
+      }, m = function() {
+        var t2 = arguments.length > 0 && void 0 !== arguments[0] && arguments[0];
+        this.running = false, this.events = [], this.add(t2);
+      };
+      m.prototype.run = function() {
+        if (!this.running && this.events.length > 0) {
+          var t2 = this.events.shift();
+          this.running = true, t2(), this.running = false, this.run();
+        }
+      }, m.prototype.add = function() {
+        var t2 = this, n2 = arguments.length > 0 && void 0 !== arguments[0] && arguments[0];
+        return !!n2 && (Array.isArray(n2) ? v(n2, function(n3) {
+          return t2.add(n3);
+        }) : (this.events.push(n2), void this.run()));
+      }, m.prototype.clear = function() {
+        this.events = [];
+      };
+      var d = function(t2) {
+        var n2 = arguments.length > 1 && void 0 !== arguments[1] ? arguments[1] : {};
+        return this.instance = t2, this.data = n2, this;
+      }, y = function() {
+        var t2 = arguments.length > 0 && void 0 !== arguments[0] && arguments[0];
+        this.events = {}, this.instance = t2;
+      };
+      y.prototype.on = function() {
+        var t2 = arguments.length > 0 && void 0 !== arguments[0] && arguments[0], n2 = arguments.length > 1 && void 0 !== arguments[1] && arguments[1];
+        return !(!t2 || !n2) && (Array.isArray(this.events[t2]) || (this.events[t2] = []), this.events[t2].push(n2));
+      }, y.prototype.emit = function() {
+        var t2 = arguments.length > 0 && void 0 !== arguments[0] && arguments[0], n2 = arguments.length > 1 && void 0 !== arguments[1] ? arguments[1] : {};
+        if (!t2 || !Array.isArray(this.events[t2])) return false;
+        var e2 = new d(this.instance, n2);
+        v(this.events[t2], function(t3) {
+          return t3(e2);
+        });
+      };
+      var g = function(t2) {
+        return !("naturalHeight" in t2 && t2.naturalHeight + t2.naturalWidth === 0) || t2.width + t2.height !== 0;
+      }, E = function(t2, n2) {
+        var e2 = arguments.length > 2 && void 0 !== arguments[2] && arguments[2];
+        return new Promise(function(t3, e3) {
+          if (n2.complete) return g(n2) ? t3(n2) : e3(n2);
+          n2.addEventListener("load", function() {
+            return g(n2) ? t3(n2) : e3(n2);
+          }), n2.addEventListener("error", function() {
+            return e3(n2);
+          });
+        }).then(function(n3) {
+          e2 && t2.emit(t2.constants.EVENT_IMAGE_LOAD, { img: n3 });
+        }).catch(function(n3) {
+          return t2.emit(t2.constants.EVENT_IMAGE_ERROR, { img: n3 });
+        });
+      }, w = function(t2, e2) {
+        var r2 = arguments.length > 2 && void 0 !== arguments[2] && arguments[2];
+        return n(e2, function(n2) {
+          return E(t2, n2, r2);
+        });
+      }, A = function(t2, n2) {
+        var e2 = arguments.length > 2 && void 0 !== arguments[2] && arguments[2];
+        return Promise.all(w(t2, n2, e2)).then(function() {
+          t2.emit(t2.constants.EVENT_IMAGE_COMPLETE);
+        });
+      }, I = function(n2) {
+        return t(function() {
+          n2.emit(n2.constants.EVENT_RESIZE), n2.queue.add(function() {
+            return n2.recalculate(true, true);
+          });
+        }, 100);
+      }, N = function(t2) {
+        if (t2.container = h(t2.options.container), t2.container instanceof h || !t2.container) return !!t2.options.debug && console.error("Error: Container not found");
+        t2.container.length && (t2.container = t2.container[0]), t2.options.container = t2.container, t2.container.style.position = "relative";
+      }, T = function(t2) {
+        t2.queue = new m(), t2.events = new y(t2), t2.rows = [], t2.resizer = I(t2);
+      }, L = function(t2) {
+        var n2 = h("img", t2.container);
+        window.addEventListener("resize", t2.resizer), t2.on(t2.constants.EVENT_IMAGE_LOAD, function() {
+          return t2.recalculate(false, false);
+        }), t2.on(t2.constants.EVENT_IMAGE_COMPLETE, function() {
+          return t2.recalculate(true, true);
+        }), t2.options.useOwnImageLoader || e(t2, n2, !t2.options.waitForImages), t2.emit(t2.constants.EVENT_INITIALIZED);
+      }, _ = function(t2) {
+        N(t2), T(t2), L(t2);
+      }, b = function(t2) {
+        return t2 === Object(t2) && "[object Array]" !== Object.prototype.toString.call(t2);
+      }, O = function(t2, n2) {
+        b(t2) || (n2.columns = t2), b(t2) && t2.columns && (n2.columns = t2.columns), b(t2) && t2.margin && !b(t2.margin) && (n2.margin = { x: t2.margin, y: t2.margin }), b(t2) && t2.margin && b(t2.margin) && t2.margin.x && (n2.margin.x = t2.margin.x), b(t2) && t2.margin && b(t2.margin) && t2.margin.y && (n2.margin.y = t2.margin.y);
+      }, C = function(t2, n2) {
+        return window.getComputedStyle(t2, null).getPropertyValue(n2);
+      }, M = function(t2, n2) {
+        var e2 = arguments.length > 2 && void 0 !== arguments[2] && arguments[2];
+        if (t2.lastcol || (t2.lastcol = 0), t2.rows.length < 1 && (e2 = true), e2) {
+          t2.rows = [], t2.cols = [], t2.lastcol = 0;
+          for (var r2 = n2 - 1; r2 >= 0; r2--) t2.rows[r2] = 0, t2.cols[r2] = u(t2, r2);
+        } else if (t2.tmpRows) {
+          t2.rows = [];
+          for (var r2 = n2 - 1; r2 >= 0; r2--) t2.rows[r2] = t2.tmpRows[r2];
+        } else {
+          t2.tmpRows = [];
+          for (var r2 = n2 - 1; r2 >= 0; r2--) t2.tmpRows[r2] = t2.rows[r2];
+        }
+      }, V = function(t2) {
+        var n2 = arguments.length > 1 && void 0 !== arguments[1] && arguments[1], e2 = !(arguments.length > 2 && void 0 !== arguments[2]) || arguments[2], r2 = n2 ? t2.container.children : h(':scope > *:not([data-macy-complete="1"])', t2.container);
+        r2 = Array.from(r2).filter(function(t3) {
+          return null !== t3.offsetParent;
+        });
+        var o2 = c(t2.options);
+        return v(r2, function(t3) {
+          n2 && (t3.dataset.macyComplete = 0), t3.style.width = o2;
+        }), t2.options.trueOrder ? (f(t2, r2, n2, e2), t2.emit(t2.constants.EVENT_RECALCULATED)) : (p(t2, r2, n2, e2), t2.emit(t2.constants.EVENT_RECALCULATED));
+      }, R = function() {
+        return !!window.Promise;
+      }, x = Object.assign || function(t2) {
+        for (var n2 = 1; n2 < arguments.length; n2++) {
+          var e2 = arguments[n2];
+          for (var r2 in e2) Object.prototype.hasOwnProperty.call(e2, r2) && (t2[r2] = e2[r2]);
+        }
+        return t2;
+      };
+      Array.from || (Array.from = function(t2) {
+        for (var n2 = 0, e2 = []; n2 < t2.length; ) e2.push(t2[n2++]);
+        return e2;
+      });
+      var k = { columns: 4, margin: 2, trueOrder: false, waitForImages: false, useImageLoader: true, breakAt: {}, useOwnImageLoader: false, onInit: false, cancelLegacy: false, useContainerForBreakpoints: false };
+      !function() {
+        try {
+          document.createElement("a").querySelector(":scope *");
+        } catch (t2) {
+          !function() {
+            function t3(t4) {
+              return function(e3) {
+                if (e3 && n2.test(e3)) {
+                  var r3 = this.getAttribute("id");
+                  r3 || (this.id = "q" + Math.floor(9e6 * Math.random()) + 1e6), arguments[0] = e3.replace(n2, "#" + this.id);
+                  var o2 = t4.apply(this, arguments);
+                  return null === r3 ? this.removeAttribute("id") : r3 || (this.id = r3), o2;
+                }
+                return t4.apply(this, arguments);
+              };
+            }
+            var n2 = /:scope\b/gi, e2 = t3(Element.prototype.querySelector);
+            Element.prototype.querySelector = function(t4) {
+              return e2.apply(this, arguments);
+            };
+            var r2 = t3(Element.prototype.querySelectorAll);
+            Element.prototype.querySelectorAll = function(t4) {
+              return r2.apply(this, arguments);
+            };
+          }();
+        }
+      }();
+      var q = function t2() {
+        var n2 = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : k;
+        if (!(this instanceof t2)) return new t2(n2);
+        this.options = {}, x(this.options, k, n2), this.options.cancelLegacy && !R() || _(this);
+      };
+      return q.init = function(t2) {
+        return console.warn("Depreciated: Macy.init will be removed in v3.0.0 opt to use Macy directly like so Macy({ /*options here*/ }) "), new q(t2);
+      }, q.prototype.recalculateOnImageLoad = function() {
+        var t2 = arguments.length > 0 && void 0 !== arguments[0] && arguments[0];
+        return e(this, h("img", this.container), !t2);
+      }, q.prototype.runOnImageLoad = function(t2) {
+        var n2 = arguments.length > 1 && void 0 !== arguments[1] && arguments[1], r2 = h("img", this.container);
+        return this.on(this.constants.EVENT_IMAGE_COMPLETE, t2), n2 && this.on(this.constants.EVENT_IMAGE_LOAD, t2), e(this, r2, n2);
+      }, q.prototype.recalculate = function() {
+        var t2 = this, n2 = arguments.length > 0 && void 0 !== arguments[0] && arguments[0], e2 = !(arguments.length > 1 && void 0 !== arguments[1]) || arguments[1];
+        return e2 && this.queue.clear(), this.queue.add(function() {
+          return V(t2, n2, e2);
+        });
+      }, q.prototype.remove = function() {
+        window.removeEventListener("resize", this.resizer), v(this.container.children, function(t2) {
+          t2.removeAttribute("data-macy-complete"), t2.removeAttribute("style");
+        }), this.container.removeAttribute("style");
+      }, q.prototype.reInit = function() {
+        this.recalculate(true, true), this.emit(this.constants.EVENT_INITIALIZED), window.addEventListener("resize", this.resizer), this.container.style.position = "relative";
+      }, q.prototype.on = function(t2, n2) {
+        this.events.on(t2, n2);
+      }, q.prototype.emit = function(t2, n2) {
+        this.events.emit(t2, n2);
+      }, q.constants = { EVENT_INITIALIZED: "macy.initialized", EVENT_RECALCULATED: "macy.recalculated", EVENT_IMAGE_LOAD: "macy.image.load", EVENT_IMAGE_ERROR: "macy.image.error", EVENT_IMAGE_COMPLETE: "macy.images.complete", EVENT_RESIZE: "macy.resize" }, q.prototype.constants = q.constants, q;
+    });
+  })(macy$1);
+  return macy$1.exports;
+}
+var macyExports = requireMacy();
+const Macy = /* @__PURE__ */ getDefaultExportFromCjs(macyExports);
+const component = document.querySelector("[data-component='project-gallery']");
+if (!!component) {
+  const container = component.querySelector(".w-dyn-items");
+  const children = Array.from(container.children);
+  children.reverse().forEach((child) => container.appendChild(child));
+  Macy({
+    container,
+    margin: 16,
+    columns: 3,
+    breakAt: {
+      991: {
+        columns: 2
+      },
+      767: {
+        margin: 8
+      }
+    }
+  });
+}
+/*!
  * SplitText 3.13.0
  * https://gsap.com
  *
  * @license Copyright 2025, GreenSock. All rights reserved. Subject to the terms at https://gsap.com/standard-license.
  * @author: Jack Doyle
  */
-let gsap$1, _fonts, _coreInitted$1, _initIfNecessary = () => _coreInitted$1 || SplitText.register(window.gsap), _charSegmenter = typeof Intl !== "undefined" ? new Intl.Segmenter() : 0, _toArray = (r) => typeof r === "string" ? _toArray(document.querySelectorAll(r)) : "length" in r ? Array.from(r) : [r], _elements = (targets) => _toArray(targets).filter((e) => e instanceof HTMLElement), _emptyArray = [], _context = function() {
+let gsap, _fonts, _coreInitted, _initIfNecessary = () => _coreInitted || SplitText.register(window.gsap), _charSegmenter = typeof Intl !== "undefined" ? new Intl.Segmenter() : 0, _toArray = (r) => typeof r === "string" ? _toArray(document.querySelectorAll(r)) : "length" in r ? Array.from(r) : [r], _elements = (targets) => _toArray(targets).filter((e) => e instanceof HTMLElement), _emptyArray = [], _context = function() {
 }, _spacesRegEx = /\s+/g, _emojiSafeRegEx = new RegExp("\\p{RI}\\p{RI}|\\p{Emoji}(\\p{EMod}|\\u{FE0F}\\u{20E3}?|[\\u{E0020}-\\u{E007E}]+\\u{E007F})?(\\u{200D}\\p{Emoji}(\\p{EMod}|\\u{FE0F}\\u{20E3}?|[\\u{E0020}-\\u{E007E}]+\\u{E007F})?)*|.", "gu"), _emptyBounds = { left: 0, top: 0, width: 0, height: 0 }, _stretchToFitSpecialChars = (collection, specialCharsRegEx) => {
   if (specialCharsRegEx) {
     let charsFound = new Set(collection.join("").match(specialCharsRegEx) || _emptyArray), i = collection.length, slots, word, char, combined;
@@ -7591,493 +8822,19 @@ const _SplitText = class _SplitText2 {
     return new _SplitText2(elements, config3);
   }
   static register(core) {
-    gsap$1 = gsap$1 || core || window.gsap;
-    if (gsap$1) {
-      _toArray = gsap$1.utils.toArray;
-      _context = gsap$1.core.context || _context;
+    gsap = gsap || core || window.gsap;
+    if (gsap) {
+      _toArray = gsap.utils.toArray;
+      _context = gsap.core.context || _context;
     }
-    if (!_coreInitted$1 && window.innerWidth > 0) {
+    if (!_coreInitted && window.innerWidth > 0) {
       _fonts = document.fonts;
-      _coreInitted$1 = true;
+      _coreInitted = true;
     }
   }
 };
 _SplitText.version = "3.13.0";
 let SplitText = _SplitText;
-/*!
- * paths 3.13.0
- * https://gsap.com
- *
- * Copyright 2008-2025, GreenSock. All rights reserved.
- * Subject to the terms at https://gsap.com/standard-license
- * @author: Jack Doyle, jack@greensock.com
-*/
-var _svgPathExp = /[achlmqstvz]|(-?\d*\.?\d*(?:e[\-+]?\d+)?)[0-9]/ig, _scientific = /[\+\-]?\d*\.?\d+e[\+\-]?\d+/ig, _DEG2RAD = Math.PI / 180, _sin = Math.sin, _cos = Math.cos, _abs = Math.abs, _sqrt = Math.sqrt, _isNumber3 = function _isNumber4(value) {
-  return typeof value === "number";
-}, _roundingNum = 1e5, _round$1 = function _round3(value) {
-  return Math.round(value * _roundingNum) / _roundingNum || 0;
-};
-function transformRawPath(rawPath, a, b, c, d, tx, ty) {
-  var j = rawPath.length, segment, l, i, x, y;
-  while (--j > -1) {
-    segment = rawPath[j];
-    l = segment.length;
-    for (i = 0; i < l; i += 2) {
-      x = segment[i];
-      y = segment[i + 1];
-      segment[i] = x * a + y * c + tx;
-      segment[i + 1] = x * b + y * d + ty;
-    }
-  }
-  rawPath._dirty = 1;
-  return rawPath;
-}
-function arcToSegment(lastX, lastY, rx, ry, angle, largeArcFlag, sweepFlag, x, y) {
-  if (lastX === x && lastY === y) {
-    return;
-  }
-  rx = _abs(rx);
-  ry = _abs(ry);
-  var angleRad = angle % 360 * _DEG2RAD, cosAngle = _cos(angleRad), sinAngle = _sin(angleRad), PI = Math.PI, TWOPI = PI * 2, dx2 = (lastX - x) / 2, dy2 = (lastY - y) / 2, x1 = cosAngle * dx2 + sinAngle * dy2, y1 = -sinAngle * dx2 + cosAngle * dy2, x1_sq = x1 * x1, y1_sq = y1 * y1, radiiCheck = x1_sq / (rx * rx) + y1_sq / (ry * ry);
-  if (radiiCheck > 1) {
-    rx = _sqrt(radiiCheck) * rx;
-    ry = _sqrt(radiiCheck) * ry;
-  }
-  var rx_sq = rx * rx, ry_sq = ry * ry, sq = (rx_sq * ry_sq - rx_sq * y1_sq - ry_sq * x1_sq) / (rx_sq * y1_sq + ry_sq * x1_sq);
-  if (sq < 0) {
-    sq = 0;
-  }
-  var coef = (largeArcFlag === sweepFlag ? -1 : 1) * _sqrt(sq), cx1 = coef * (rx * y1 / ry), cy1 = coef * -(ry * x1 / rx), sx2 = (lastX + x) / 2, sy2 = (lastY + y) / 2, cx = sx2 + (cosAngle * cx1 - sinAngle * cy1), cy = sy2 + (sinAngle * cx1 + cosAngle * cy1), ux = (x1 - cx1) / rx, uy = (y1 - cy1) / ry, vx = (-x1 - cx1) / rx, vy = (-y1 - cy1) / ry, temp = ux * ux + uy * uy, angleStart = (uy < 0 ? -1 : 1) * Math.acos(ux / _sqrt(temp)), angleExtent = (ux * vy - uy * vx < 0 ? -1 : 1) * Math.acos((ux * vx + uy * vy) / _sqrt(temp * (vx * vx + vy * vy)));
-  isNaN(angleExtent) && (angleExtent = PI);
-  if (!sweepFlag && angleExtent > 0) {
-    angleExtent -= TWOPI;
-  } else if (sweepFlag && angleExtent < 0) {
-    angleExtent += TWOPI;
-  }
-  angleStart %= TWOPI;
-  angleExtent %= TWOPI;
-  var segments = Math.ceil(_abs(angleExtent) / (TWOPI / 4)), rawPath = [], angleIncrement = angleExtent / segments, controlLength = 4 / 3 * _sin(angleIncrement / 2) / (1 + _cos(angleIncrement / 2)), ma = cosAngle * rx, mb = sinAngle * rx, mc = sinAngle * -ry, md = cosAngle * ry, i;
-  for (i = 0; i < segments; i++) {
-    angle = angleStart + i * angleIncrement;
-    x1 = _cos(angle);
-    y1 = _sin(angle);
-    ux = _cos(angle += angleIncrement);
-    uy = _sin(angle);
-    rawPath.push(x1 - controlLength * y1, y1 + controlLength * x1, ux + controlLength * uy, uy - controlLength * ux, ux, uy);
-  }
-  for (i = 0; i < rawPath.length; i += 2) {
-    x1 = rawPath[i];
-    y1 = rawPath[i + 1];
-    rawPath[i] = x1 * ma + y1 * mc + cx;
-    rawPath[i + 1] = x1 * mb + y1 * md + cy;
-  }
-  rawPath[i - 2] = x;
-  rawPath[i - 1] = y;
-  return rawPath;
-}
-function stringToRawPath(d) {
-  var a = (d + "").replace(_scientific, function(m) {
-    var n = +m;
-    return n < 1e-4 && n > -1e-4 ? 0 : n;
-  }).match(_svgPathExp) || [], path = [], relativeX = 0, relativeY = 0, twoThirds = 2 / 3, elements = a.length, points = 0, errorMessage = "ERROR: malformed path: " + d, i, j, x, y, command, isRelative, segment, startX, startY, difX, difY, beziers, prevCommand, flag1, flag2, line = function line2(sx, sy, ex, ey) {
-    difX = (ex - sx) / 3;
-    difY = (ey - sy) / 3;
-    segment.push(sx + difX, sy + difY, ex - difX, ey - difY, ex, ey);
-  };
-  if (!d || !isNaN(a[0]) || isNaN(a[1])) {
-    console.log(errorMessage);
-    return path;
-  }
-  for (i = 0; i < elements; i++) {
-    prevCommand = command;
-    if (isNaN(a[i])) {
-      command = a[i].toUpperCase();
-      isRelative = command !== a[i];
-    } else {
-      i--;
-    }
-    x = +a[i + 1];
-    y = +a[i + 2];
-    if (isRelative) {
-      x += relativeX;
-      y += relativeY;
-    }
-    if (!i) {
-      startX = x;
-      startY = y;
-    }
-    if (command === "M") {
-      if (segment) {
-        if (segment.length < 8) {
-          path.length -= 1;
-        } else {
-          points += segment.length;
-        }
-      }
-      relativeX = startX = x;
-      relativeY = startY = y;
-      segment = [x, y];
-      path.push(segment);
-      i += 2;
-      command = "L";
-    } else if (command === "C") {
-      if (!segment) {
-        segment = [0, 0];
-      }
-      if (!isRelative) {
-        relativeX = relativeY = 0;
-      }
-      segment.push(x, y, relativeX + a[i + 3] * 1, relativeY + a[i + 4] * 1, relativeX += a[i + 5] * 1, relativeY += a[i + 6] * 1);
-      i += 6;
-    } else if (command === "S") {
-      difX = relativeX;
-      difY = relativeY;
-      if (prevCommand === "C" || prevCommand === "S") {
-        difX += relativeX - segment[segment.length - 4];
-        difY += relativeY - segment[segment.length - 3];
-      }
-      if (!isRelative) {
-        relativeX = relativeY = 0;
-      }
-      segment.push(difX, difY, x, y, relativeX += a[i + 3] * 1, relativeY += a[i + 4] * 1);
-      i += 4;
-    } else if (command === "Q") {
-      difX = relativeX + (x - relativeX) * twoThirds;
-      difY = relativeY + (y - relativeY) * twoThirds;
-      if (!isRelative) {
-        relativeX = relativeY = 0;
-      }
-      relativeX += a[i + 3] * 1;
-      relativeY += a[i + 4] * 1;
-      segment.push(difX, difY, relativeX + (x - relativeX) * twoThirds, relativeY + (y - relativeY) * twoThirds, relativeX, relativeY);
-      i += 4;
-    } else if (command === "T") {
-      difX = relativeX - segment[segment.length - 4];
-      difY = relativeY - segment[segment.length - 3];
-      segment.push(relativeX + difX, relativeY + difY, x + (relativeX + difX * 1.5 - x) * twoThirds, y + (relativeY + difY * 1.5 - y) * twoThirds, relativeX = x, relativeY = y);
-      i += 2;
-    } else if (command === "H") {
-      line(relativeX, relativeY, relativeX = x, relativeY);
-      i += 1;
-    } else if (command === "V") {
-      line(relativeX, relativeY, relativeX, relativeY = x + (isRelative ? relativeY - relativeX : 0));
-      i += 1;
-    } else if (command === "L" || command === "Z") {
-      if (command === "Z") {
-        x = startX;
-        y = startY;
-        segment.closed = true;
-      }
-      if (command === "L" || _abs(relativeX - x) > 0.5 || _abs(relativeY - y) > 0.5) {
-        line(relativeX, relativeY, x, y);
-        if (command === "L") {
-          i += 2;
-        }
-      }
-      relativeX = x;
-      relativeY = y;
-    } else if (command === "A") {
-      flag1 = a[i + 4];
-      flag2 = a[i + 5];
-      difX = a[i + 6];
-      difY = a[i + 7];
-      j = 7;
-      if (flag1.length > 1) {
-        if (flag1.length < 3) {
-          difY = difX;
-          difX = flag2;
-          j--;
-        } else {
-          difY = flag2;
-          difX = flag1.substr(2);
-          j -= 2;
-        }
-        flag2 = flag1.charAt(1);
-        flag1 = flag1.charAt(0);
-      }
-      beziers = arcToSegment(relativeX, relativeY, +a[i + 1], +a[i + 2], +a[i + 3], +flag1, +flag2, (isRelative ? relativeX : 0) + difX * 1, (isRelative ? relativeY : 0) + difY * 1);
-      i += j;
-      if (beziers) {
-        for (j = 0; j < beziers.length; j++) {
-          segment.push(beziers[j]);
-        }
-      }
-      relativeX = segment[segment.length - 2];
-      relativeY = segment[segment.length - 1];
-    } else {
-      console.log(errorMessage);
-    }
-  }
-  i = segment.length;
-  if (i < 6) {
-    path.pop();
-    i = 0;
-  } else if (segment[0] === segment[i - 2] && segment[1] === segment[i - 1]) {
-    segment.closed = true;
-  }
-  path.totalPoints = points + i;
-  return path;
-}
-function rawPathToString(rawPath) {
-  if (_isNumber3(rawPath[0])) {
-    rawPath = [rawPath];
-  }
-  var result = "", l = rawPath.length, sl, s, i, segment;
-  for (s = 0; s < l; s++) {
-    segment = rawPath[s];
-    result += "M" + _round$1(segment[0]) + "," + _round$1(segment[1]) + " C";
-    sl = segment.length;
-    for (i = 2; i < sl; i++) {
-      result += _round$1(segment[i++]) + "," + _round$1(segment[i++]) + " " + _round$1(segment[i++]) + "," + _round$1(segment[i++]) + " " + _round$1(segment[i++]) + "," + _round$1(segment[i]) + " ";
-    }
-    if (segment.closed) {
-      result += "z";
-    }
-  }
-  return result;
-}
-/*!
- * CustomEase 3.13.0
- * https://gsap.com
- *
- * @license Copyright 2008-2025, GreenSock. All rights reserved.
- * Subject to the terms at https://gsap.com/standard-license
- * @author: Jack Doyle, jack@greensock.com
-*/
-var gsap, _coreInitted, _getGSAP3 = function _getGSAP4() {
-  return gsap || typeof window !== "undefined" && (gsap = window.gsap) && gsap.registerPlugin && gsap;
-}, _initCore3 = function _initCore4() {
-  gsap = _getGSAP3();
-  if (gsap) {
-    gsap.registerEase("_CE", CustomEase.create);
-    _coreInitted = 1;
-  } else {
-    console.warn("Please gsap.registerPlugin(CustomEase)");
-  }
-}, _bigNum = 1e20, _round4 = function _round5(value) {
-  return ~~(value * 1e3 + (value < 0 ? -0.5 : 0.5)) / 1e3;
-}, _numExp = /[-+=.]*\d+[.e\-+]*\d*[e\-+]*\d*/gi, _needsParsingExp = /[cLlsSaAhHvVtTqQ]/g, _findMinimum = function _findMinimum2(values) {
-  var l = values.length, min = _bigNum, i;
-  for (i = 1; i < l; i += 6) {
-    +values[i] < min && (min = +values[i]);
-  }
-  return min;
-}, _normalize = function _normalize2(values, height, originY) {
-  if (!originY && originY !== 0) {
-    originY = Math.max(+values[values.length - 1], +values[1]);
-  }
-  var tx = +values[0] * -1, ty = -originY, l = values.length, sx = 1 / (+values[l - 2] + tx), sy = -height || (Math.abs(+values[l - 1] - +values[1]) < 0.01 * (+values[l - 2] - +values[0]) ? _findMinimum(values) + ty : +values[l - 1] + ty), i;
-  if (sy) {
-    sy = 1 / sy;
-  } else {
-    sy = -sx;
-  }
-  for (i = 0; i < l; i += 2) {
-    values[i] = (+values[i] + tx) * sx;
-    values[i + 1] = (+values[i + 1] + ty) * sy;
-  }
-}, _bezierToPoints = function _bezierToPoints2(x1, y1, x2, y2, x3, y3, x4, y4, threshold, points, index) {
-  var x12 = (x1 + x2) / 2, y12 = (y1 + y2) / 2, x23 = (x2 + x3) / 2, y23 = (y2 + y3) / 2, x34 = (x3 + x4) / 2, y34 = (y3 + y4) / 2, x123 = (x12 + x23) / 2, y123 = (y12 + y23) / 2, x234 = (x23 + x34) / 2, y234 = (y23 + y34) / 2, x1234 = (x123 + x234) / 2, y1234 = (y123 + y234) / 2, dx = x4 - x1, dy = y4 - y1, d2 = Math.abs((x2 - x4) * dy - (y2 - y4) * dx), d3 = Math.abs((x3 - x4) * dy - (y3 - y4) * dx), length;
-  if (!points) {
-    points = [{
-      x: x1,
-      y: y1
-    }, {
-      x: x4,
-      y: y4
-    }];
-    index = 1;
-  }
-  points.splice(index || points.length - 1, 0, {
-    x: x1234,
-    y: y1234
-  });
-  if ((d2 + d3) * (d2 + d3) > threshold * (dx * dx + dy * dy)) {
-    length = points.length;
-    _bezierToPoints2(x1, y1, x12, y12, x123, y123, x1234, y1234, threshold, points, index);
-    _bezierToPoints2(x1234, y1234, x234, y234, x34, y34, x4, y4, threshold, points, index + 1 + (points.length - length));
-  }
-  return points;
-};
-var CustomEase = /* @__PURE__ */ function() {
-  function CustomEase2(id, data, config3) {
-    _coreInitted || _initCore3();
-    this.id = id;
-    this.setData(data, config3);
-  }
-  var _proto = CustomEase2.prototype;
-  _proto.setData = function setData(data, config3) {
-    config3 = config3 || {};
-    data = data || "0,0,1,1";
-    var values = data.match(_numExp), closest = 1, points = [], lookup = [], precision = config3.precision || 1, fast = precision <= 1, l, a1, a2, i, inc, j, point, prevPoint, p;
-    this.data = data;
-    if (_needsParsingExp.test(data) || ~data.indexOf("M") && data.indexOf("C") < 0) {
-      values = stringToRawPath(data)[0];
-    }
-    l = values.length;
-    if (l === 4) {
-      values.unshift(0, 0);
-      values.push(1, 1);
-      l = 8;
-    } else if ((l - 2) % 6) {
-      throw "Invalid CustomEase";
-    }
-    if (+values[0] !== 0 || +values[l - 2] !== 1) {
-      _normalize(values, config3.height, config3.originY);
-    }
-    this.segment = values;
-    for (i = 2; i < l; i += 6) {
-      a1 = {
-        x: +values[i - 2],
-        y: +values[i - 1]
-      };
-      a2 = {
-        x: +values[i + 4],
-        y: +values[i + 5]
-      };
-      points.push(a1, a2);
-      _bezierToPoints(a1.x, a1.y, +values[i], +values[i + 1], +values[i + 2], +values[i + 3], a2.x, a2.y, 1 / (precision * 2e5), points, points.length - 1);
-    }
-    l = points.length;
-    for (i = 0; i < l; i++) {
-      point = points[i];
-      prevPoint = points[i - 1] || point;
-      if ((point.x > prevPoint.x || prevPoint.y !== point.y && prevPoint.x === point.x || point === prevPoint) && point.x <= 1) {
-        prevPoint.cx = point.x - prevPoint.x;
-        prevPoint.cy = point.y - prevPoint.y;
-        prevPoint.n = point;
-        prevPoint.nx = point.x;
-        if (fast && i > 1 && Math.abs(prevPoint.cy / prevPoint.cx - points[i - 2].cy / points[i - 2].cx) > 2) {
-          fast = 0;
-        }
-        if (prevPoint.cx < closest) {
-          if (!prevPoint.cx) {
-            prevPoint.cx = 1e-3;
-            if (i === l - 1) {
-              prevPoint.x -= 1e-3;
-              closest = Math.min(closest, 1e-3);
-              fast = 0;
-            }
-          } else {
-            closest = prevPoint.cx;
-          }
-        }
-      } else {
-        points.splice(i--, 1);
-        l--;
-      }
-    }
-    l = 1 / closest + 1 | 0;
-    inc = 1 / l;
-    j = 0;
-    point = points[0];
-    if (fast) {
-      for (i = 0; i < l; i++) {
-        p = i * inc;
-        if (point.nx < p) {
-          point = points[++j];
-        }
-        a1 = point.y + (p - point.x) / point.cx * point.cy;
-        lookup[i] = {
-          x: p,
-          cx: inc,
-          y: a1,
-          cy: 0,
-          nx: 9
-        };
-        if (i) {
-          lookup[i - 1].cy = a1 - lookup[i - 1].y;
-        }
-      }
-      j = points[points.length - 1];
-      lookup[l - 1].cy = j.y - a1;
-      lookup[l - 1].cx = j.x - lookup[lookup.length - 1].x;
-    } else {
-      for (i = 0; i < l; i++) {
-        if (point.nx < i * inc) {
-          point = points[++j];
-        }
-        lookup[i] = point;
-      }
-      if (j < points.length - 1) {
-        lookup[i - 1] = points[points.length - 2];
-      }
-    }
-    this.ease = function(p2) {
-      var point2 = lookup[p2 * l | 0] || lookup[l - 1];
-      if (point2.nx < p2) {
-        point2 = point2.n;
-      }
-      return point2.y + (p2 - point2.x) / point2.cx * point2.cy;
-    };
-    this.ease.custom = this;
-    this.id && gsap && gsap.registerEase(this.id, this.ease);
-    return this;
-  };
-  _proto.getSVGData = function getSVGData(config3) {
-    return CustomEase2.getSVGData(this, config3);
-  };
-  CustomEase2.create = function create(id, data, config3) {
-    return new CustomEase2(id, data, config3).ease;
-  };
-  CustomEase2.register = function register(core) {
-    gsap = core;
-    _initCore3();
-  };
-  CustomEase2.get = function get(id) {
-    return gsap.parseEase(id);
-  };
-  CustomEase2.getSVGData = function getSVGData(ease, config3) {
-    config3 = config3 || {};
-    var width = config3.width || 100, height = config3.height || 100, x = config3.x || 0, y = (config3.y || 0) + height, e = gsap.utils.toArray(config3.path)[0], a, slope, i, inc, tx, ty, precision, threshold, prevX, prevY;
-    if (config3.invert) {
-      height = -height;
-      y = 0;
-    }
-    if (typeof ease === "string") {
-      ease = gsap.parseEase(ease);
-    }
-    if (ease.custom) {
-      ease = ease.custom;
-    }
-    if (ease instanceof CustomEase2) {
-      a = rawPathToString(transformRawPath([ease.segment], width, 0, 0, -height, x, y));
-    } else {
-      a = [x, y];
-      precision = Math.max(5, (config3.precision || 1) * 200);
-      inc = 1 / precision;
-      precision += 2;
-      threshold = 5 / precision;
-      prevX = _round4(x + inc * width);
-      prevY = _round4(y + ease(inc) * -height);
-      slope = (prevY - y) / (prevX - x);
-      for (i = 2; i < precision; i++) {
-        tx = _round4(x + i * inc * width);
-        ty = _round4(y + ease(i * inc) * -height);
-        if (Math.abs((ty - prevY) / (tx - prevX) - slope) > threshold || i === precision - 1) {
-          a.push(prevX, prevY);
-          slope = (ty - prevY) / (tx - prevX);
-        }
-        prevX = tx;
-        prevY = ty;
-      }
-      a = "M" + a.join(",");
-    }
-    e && e.setAttribute("d", a);
-    return a;
-  };
-  return CustomEase2;
-}();
-CustomEase.version = "3.13.0";
-CustomEase.headless = true;
-_getGSAP3() && gsap.registerPlugin(CustomEase);
-gsapWithCSS.registerPlugin(CustomEase);
-CustomEase.create("ease-primary", "0.62, 0.05, 0.01, 0.99");
-CustomEase.create("ease-secondary", "0.16, 1, 0.35, 1");
-const duration = 1.2;
-const staggerAmount = 0.2;
-const easePrimary = "ease-primary";
-const easeSecondary = "ease-secondary";
 gsapWithCSS.registerPlugin(ScrollTrigger, SplitText);
 document.fonts.ready.then(() => {
   const texts = document.querySelectorAll("[data-split-text='true']");
@@ -8128,428 +8885,3 @@ document.fonts.ready.then(() => {
     });
   });
 });
-gsapWithCSS.registerPlugin(ScrollTrigger);
-(() => {
-  const navbar = document.querySelector("[data-component='navbar']");
-  if (!navbar) return;
-  const logo = navbar.querySelector("[data-navbar='logo-link']");
-  const menu = navbar.querySelector("[data-navbar='menu']").children;
-  const button = navbar.querySelector(".navbar-button_component");
-  const menuButtonWrapper = navbar.querySelector(
-    "[data-navbar='menu-button']"
-  ).parentElement;
-  let visibleElements = [];
-  visibleElements = window.innerWidth > 991 ? [logo, ...menu, button] : [logo, button, menuButtonWrapper];
-  animateNavbar(visibleElements);
-  const blendModeSections = document.querySelectorAll(
-    "[data-navbar-blend-mode='false']"
-  );
-  if (blendModeSections.length) {
-    const navbarHeight = navbar.offsetHeight;
-    const setNormal = () => gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
-    const setDifference = () => gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
-    blendModeSections.forEach((section) => {
-      ScrollTrigger.create({
-        trigger: section,
-        start: `top-=${navbarHeight / 2} top`,
-        end: `bottom top+=${navbarHeight / 2}`,
-        onEnter: setNormal,
-        onEnterBack: setNormal,
-        onLeave: setDifference,
-        onLeaveBack: setDifference
-      });
-    });
-  }
-  let navOverlay;
-  const intervalId = setInterval(() => {
-    navOverlay = document.querySelector(".w-nav-overlay");
-    if (navOverlay) {
-      clearInterval(intervalId);
-      navOverlay.addEventListener("click", () => {
-        lenis.start();
-      });
-    }
-  }, 100);
-  function animateNavbar(elements) {
-    let delay = 0;
-    if (window.location.pathname === "/") {
-      delay = 3.5;
-    }
-    gsapWithCSS.set(navbar, { autoAlpha: 1 });
-    gsapWithCSS.set(elements, {
-      y: "-5rem"
-    });
-    gsapWithCSS.to(elements, {
-      y: 0,
-      duration: 1,
-      delay,
-      stagger: 0.05,
-      ease: easeSecondary
-    });
-  }
-})();
-(() => {
-  const links = document.querySelectorAll('[data-component="link-reveal"]');
-  if (links.length <= 0) return;
-  const projectList = document.querySelector("[data-projects-list]");
-  let totalProjects = 0;
-  if (projectList) totalProjects = projectList.childElementCount;
-  const duration2 = 0.54;
-  links.forEach((link) => {
-    const textElements = link.querySelectorAll("[data-link-reveal='text']");
-    link.addEventListener("mouseenter", () => animate(textElements, -100));
-    link.addEventListener("mouseleave", () => animate(textElements, 0));
-    const superscript = link.querySelector(
-      "[data-link-reveal='project-count']"
-    );
-    if (superscript) {
-      if (totalProjects > 0) {
-        superscript.textContent = `(${totalProjects})`;
-      } else {
-        superscript.remove();
-      }
-    }
-  });
-  function animate(elements, yPercent) {
-    gsapWithCSS.to(elements, {
-      yPercent,
-      duration: duration2,
-      ease: easeSecondary
-    });
-  }
-})();
-(() => {
-  const component = document.querySelectorAll("[data-image-reveal]");
-  if (component.length === 0) return;
-  component.forEach((wrapper) => {
-    const image = wrapper.querySelector("img");
-    const blind = wrapper.querySelector("[data-image-blind]");
-    gsapWithCSS.set(image, { scale: 1.05 });
-    const reveal = gsapWithCSS.timeline({
-      scrollTrigger: {
-        trigger: wrapper,
-        start: "top 90%",
-        toggleActions: "play none none reverse"
-      }
-    });
-    if (blind) {
-      reveal.to(blind, {
-        opacity: 0,
-        duration: 0.6
-      });
-      reveal.to(
-        image,
-        {
-          scale: 1,
-          duration: 1.2,
-          ease: easeSecondary
-        },
-        0
-      );
-    }
-  });
-})();
-function isMobileDevice() {
-  return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  ) || window.innerWidth <= 768 && window.innerHeight <= 1024;
-}
-(() => {
-  const component = document.querySelector("[data-component='home-hero']");
-  if (!component) return;
-  if ("scrollRestoration" in history) {
-    history.scrollRestoration = "manual";
-  }
-  if (isMobileDevice()) {
-    gsapWithCSS.set(component, { height: window.innerHeight });
-  }
-  setTimeout(() => {
-    lenis.scrollTo(0, { duration: 0.01, force: true });
-  }, 100);
-  const curtain = component.querySelector("[data-home-hero='curtain']");
-  const logo = component.querySelector("[data-home-hero='logo']");
-  const number = component.querySelector("[data-home-hero='number']");
-  const bar = component.querySelector("[data-home-hero='bar']");
-  const image = component.querySelector("[data-home-hero='background-image']");
-  const texts = component.querySelectorAll("p");
-  const loadingSteps = [
-    { progress: 66, duration: 1.5, ease: "power1.in" },
-    { progress: 100, duration: 0.6, ease: "power1.in" }
-  ];
-  gsapWithCSS.set(logo, { autoAlpha: 1 });
-  gsapWithCSS.fromTo(
-    logo,
-    { clipPath: "inset(0% 100% 0% 0%)" },
-    { clipPath: "inset(0% 0% 0% 0%)", duration: 1 }
-  );
-  const animateNumber = (target, steps) => {
-    const tl = gsapWithCSS.timeline();
-    steps.forEach((step) => {
-      tl.to(target, {
-        textContent: step.progress,
-        duration: step.duration,
-        ease: step.ease,
-        snap: { textContent: 1 },
-        onUpdate() {
-          target.textContent = Math.round(this.targets()[0].textContent);
-        }
-      });
-    });
-    return tl;
-  };
-  const animateBar = (target, steps, onComplete) => {
-    const tl = gsapWithCSS.timeline({ onComplete });
-    steps.forEach((step) => {
-      tl.to(target, {
-        width: `${step.progress}%`,
-        duration: step.duration,
-        ease: step.ease
-      });
-    });
-    return tl;
-  };
-  const curtainTL = gsapWithCSS.timeline({ paused: true }).to(curtain, {
-    clipPath: "inset(0% 0% 100% 0%)",
-    ease: "power4.out",
-    duration: 2
-  });
-  const imageTL = gsapWithCSS.timeline({ paused: true });
-  imageTL.from(image, {
-    scale: 1.05,
-    webkitFilter: `blur(5px)`,
-    filter: `blur(5px)`,
-    ease: "power3.inOut",
-    duration: 1.5
-  });
-  imageTL.add(() => {
-    texts.forEach((text, i) => {
-      const lines = text.querySelectorAll(".line");
-      gsapWithCSS.set(text, { autoAlpha: 1 });
-      gsapWithCSS.timeline({ delay: i * 0.3 }).from(lines, {
-        yPercent: 100,
-        duration,
-        ease: easePrimary,
-        stagger: { amount: staggerAmount }
-      });
-    });
-  }, imageTL.duration() * 0.5);
-  animateNumber(number, loadingSteps);
-  animateBar(bar, loadingSteps, () => {
-    curtainTL.play();
-    imageTL.play();
-  });
-})();
-gsapWithCSS.registerPlugin(ScrollTrigger);
-(() => {
-  const component = document.querySelector("[data-component='projects-mask']");
-  if (!component) return;
-  const projects = component.querySelectorAll("[data-projects-mask='item']");
-  const projectsAmmount = projects.length;
-  const getStableVH = () => {
-    if (window.visualViewport) {
-      return Math.max(window.visualViewport.height, window.innerHeight);
-    }
-    return Math.max(window.innerHeight, document.documentElement.clientHeight);
-  };
-  let localTriggers = [];
-  const init4 = () => {
-    localTriggers.forEach((t) => t.kill());
-    localTriggers = [];
-    const windowHeight = getStableVH();
-    component.style.height = `${projectsAmmount * windowHeight}px`;
-    projects.forEach((project, i) => {
-      const projectOffsetY = (i - 1) * windowHeight;
-      gsapWithCSS.set(project, { zIndex: i + 1 });
-      if (i !== 0) {
-        const tween = gsapWithCSS.fromTo(
-          project,
-          {
-            clipPath: "inset(100% 0% 0% 0%)"
-          },
-          {
-            clipPath: "inset(0% 0% 0% 0%)",
-            ease: "none",
-            scrollTrigger: {
-              trigger: project,
-              start: `bottom+=${projectOffsetY} bottom`,
-              end: `bottom+=${projectOffsetY} top`,
-              scrub: true
-            }
-          }
-        );
-        localTriggers.push(tween.scrollTrigger);
-      }
-    });
-    ScrollTrigger.refresh();
-  };
-  init4();
-  window.addEventListener("resize", () => {
-    init4();
-  });
-})();
-(() => {
-  const component = document.querySelector("[data-custom-cursor]");
-  if (!component || !window.matchMedia("(pointer: fine)").matches) return;
-  gsapWithCSS.set(component, { autoAlpha: 0, scale: 0 });
-  var cursorTriggers = document.querySelectorAll(
-    "[data-custom-cursor-trigger]"
-  );
-  var cursorWidth = component.offsetWidth;
-  var cursorHeight = component.offsetHeight;
-  var watchCursor = function watchCursor2(e) {
-    var x = e.clientX;
-    var y = e.clientY;
-    component.style.left = x - cursorWidth / 2 + "px";
-    component.style.top = y - cursorHeight / 2 + "px";
-  };
-  document.addEventListener("pointermove", watchCursor);
-  let hideTween;
-  cursorTriggers.forEach(function(trigger) {
-    trigger.addEventListener("mouseenter", function() {
-      if (hideTween) {
-        hideTween.kill();
-        hideTween = null;
-      }
-      gsapWithCSS.set(trigger.querySelectorAll("*"), { cursor: "none" });
-      gsapWithCSS.set(component, { autoAlpha: 1 });
-      gsapWithCSS.to(component, {
-        scale: 1,
-        duration: 0.2
-      });
-    });
-    trigger.addEventListener("mouseleave", function() {
-      gsapWithCSS.set("*", { clearProps: "cursor" });
-      hideTween = gsapWithCSS.to(component, {
-        scale: 0,
-        duration: 0.2,
-        onComplete: () => {
-          gsapWithCSS.set(component, { autoAlpha: 0 });
-          hideTween = null;
-        }
-      });
-    });
-  });
-})();
-gsapWithCSS.registerPlugin(ScrollTrigger);
-(() => {
-  const component = document.querySelector("[data-component='values']");
-  if (!component) return;
-  const imagesWrapper = component.querySelectorAll(
-    "[data-values='image-wrapper']"
-  );
-  const buttons = component.querySelectorAll("[data-values='button']");
-  const descriptions = component.querySelectorAll(
-    "[data-values='description']"
-  );
-  if (!imagesWrapper || !buttons || !descriptions) return;
-  const duration2 = 1;
-  let zIndex = 0;
-  initSetup();
-  buttons.forEach((button) => {
-    button.addEventListener("click", (e) => {
-      const id = e.currentTarget.dataset.id;
-      triggerTab(id);
-    });
-  });
-  ScrollTrigger.create({
-    trigger: buttons[0],
-    start: "top bottom",
-    onEnter: () => buttons[0].click()
-  });
-  function triggerTab(id) {
-    const currentlyActiveButton = [...buttons].find(
-      (el) => el.classList.contains("is-active")
-    );
-    let currentlyActiveId = null;
-    if (currentlyActiveButton) {
-      currentlyActiveId = currentlyActiveButton.dataset.id;
-    }
-    const button = getById2(buttons, id);
-    if (button.classList.contains("is-active")) return;
-    const imageWrapper = getById2(imagesWrapper, id);
-    const description = getById2(descriptions, id);
-    if (currentlyActiveId) removeActive(currentlyActiveId);
-    setActive(button, imageWrapper, description);
-  }
-  function initSetup() {
-    buttons.forEach((button, i) => {
-      button.classList.remove("is-active");
-      const index = button.querySelector(
-        "[data-values='button-index-wrapper']"
-      );
-      if (!index) return;
-      const textElement = index.querySelector("p");
-      if (!textElement) return;
-      textElement.textContent = `(${textElement.textContent.padStart(2, "0")})`;
-    });
-    gsapWithCSS.set(imagesWrapper, { clipPath: "inset(100% 0% 0% 0%)" });
-    gsapWithCSS.set(descriptions, {
-      yPercent: 50,
-      autoAlpha: 0
-    });
-    const indexesMobile = document.querySelectorAll(
-      "[data-value-index-mobile]"
-    );
-    indexesMobile.forEach((index) => {
-      const textElement = index.firstChild;
-      textElement.textContent = `(${textElement.textContent.padStart(2, "0")})`;
-    });
-  }
-  function getById2(nodelist, id) {
-    return [...nodelist].find((el) => el.dataset.id === id);
-  }
-  function setActive(button, imageWrapper, description) {
-    button.classList.add("is-active");
-    zIndex++;
-    gsapWithCSS.set(imageWrapper, { zIndex });
-    gsapWithCSS.fromTo(
-      imageWrapper,
-      {
-        clipPath: "inset(100% 0% 0% 0%)"
-      },
-      {
-        clipPath: "inset(0% 0% 0% 0%)",
-        ease: easePrimary,
-        duration: duration2
-      }
-    );
-    gsapWithCSS.fromTo(
-      description,
-      {
-        yPercent: 50,
-        autoAlpha: 0
-      },
-      {
-        yPercent: 0,
-        autoAlpha: 1,
-        duration: duration2,
-        ease: easePrimary
-      }
-    );
-  }
-  function removeActive(id) {
-    const button = getById2(buttons, id);
-    getById2(imagesWrapper, id);
-    const description = getById2(descriptions, id);
-    button.classList.remove("is-active");
-    gsapWithCSS.to(description, {
-      yPercent: -50,
-      autoAlpha: 0,
-      duration: duration2,
-      ease: easePrimary
-    });
-  }
-})();
-(() => {
-  const component = document.querySelector("[data-component='process']");
-  if (!component) return;
-  const indexesWrapper = component.querySelectorAll(
-    "[data-process='index-wrapper']"
-  );
-  if (!indexesWrapper) return;
-  indexesWrapper.forEach((indexWrapper) => {
-    const textElement = indexWrapper.querySelector("p");
-    if (!textElement) return;
-    textElement.textContent = textElement.textContent.padStart(2, "0");
-  });
-})();
