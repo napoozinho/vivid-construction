@@ -8858,7 +8858,7 @@ document.fonts.ready.then(() => {
     el.innerHTML = el.innerHTML.replace(/\n/g, "<br>");
   });
   SplitText.create(texts, {
-    autoSplit: true,
+    // autoSplit: true,
     type: "lines",
     mask: "lines",
     linesClass: "line",

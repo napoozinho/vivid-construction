@@ -14,7 +14,7 @@ document.fonts.ready.then(() => {
   });
 
   SplitText.create(texts, {
-    autoSplit: true,
+    // autoSplit: true,
     type: "lines",
     mask: "lines",
     linesClass: "line",
