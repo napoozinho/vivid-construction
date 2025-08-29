@@ -6,7 +6,7 @@ if (!!component) {
   const container = component.querySelector(".w-dyn-items");
 
   const children = Array.from(container.children);
-  children.reverse().forEach(child => container.appendChild(child));
+  children.reverse().forEach((child) => container.appendChild(child));
 
   const macy = Macy({
     container: container,

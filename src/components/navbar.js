@@ -47,7 +47,6 @@ gsap.registerPlugin(ScrollTrigger);
     });
   }
 
-  //finish this
   let navOverlay;
   const intervalId = setInterval(() => {
     navOverlay = document.querySelector(".w-nav-overlay");
@@ -55,9 +54,28 @@ gsap.registerPlugin(ScrollTrigger);
       clearInterval(intervalId);
       navOverlay.addEventListener("click", () => {
         lenis.start();
+        ScrollTrigger.refresh();
+        setTimeout(() => {
+          gsap.set(navbar, { mixBlendMode: "difference" });
+        }, 250);
       });
     }
   }, 100);
+
+  menuButtonWrapper.addEventListener("click", () => {
+    // const inlineBlendMode = navbar.style.mixBlendMode;
+
+    if (lenis.isStopped) {
+      lenis.start();
+      ScrollTrigger.refresh();
+      setTimeout(() => {
+        gsap.set(navbar, { mixBlendMode: "difference" });
+      }, 250);
+    } else {
+      lenis.stop();
+      gsap.set(navbar, { mixBlendMode: "normal" });
+    }
+  });
 
   function animateNavbar(elements) {
     let delay = 0;

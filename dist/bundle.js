@@ -7810,9 +7810,25 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
       clearInterval(intervalId);
       navOverlay.addEventListener("click", () => {
         lenis.start();
+        ScrollTrigger.refresh();
+        setTimeout(() => {
+          gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
+        }, 250);
       });
     }
   }, 100);
+  menuButtonWrapper.addEventListener("click", () => {
+    if (lenis.isStopped) {
+      lenis.start();
+      ScrollTrigger.refresh();
+      setTimeout(() => {
+        gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
+      }, 250);
+    } else {
+      lenis.stop();
+      gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
+    }
+  });
   function animateNavbar(elements) {
     let delay = 0;
     if (window.location.pathname === "/") {
