@@ -13,7 +13,6 @@ gsap.registerPlugin(ScrollTrigger);
   const menu = navbar.querySelector("[data-navbar='menu']").children;
   const button = navbar.querySelector(".navbar-button_component");
 
-  const blendTargets = [logo, ...menu];
   
   const menuButtonWrapper = navbar.querySelector(
     "[data-navbar='menu-button']",
@@ -33,19 +32,11 @@ gsap.registerPlugin(ScrollTrigger);
   if (blendModeSections.length) {
     const navbarHeight = navbar.offsetHeight;
 
-    //const setNormal = () => gsap.set(navbar, { mixBlendMode: "normal" });
-    //const setDifference = () =>
-      //gsap.set(navbar, { mixBlendMode: "difference" });
+    const setNormal = () => gsap.set(navbar, { mixBlendMode: "normal" });
+    const setDifference = () =>
+    gsap.set(navbar, { mixBlendMode: "difference" });
 
-    const setNormal = () =>
-  gsap.set(blendTargets, {
-    mixBlendMode: "normal",
-  });
 
-const setDifference = () =>
-  gsap.set(blendTargets, {
-    mixBlendMode: "difference",
-  });
 
     blendModeSections.forEach((section) => {
       ScrollTrigger.create({
@@ -69,35 +60,25 @@ const setDifference = () =>
         lenis.start();
         ScrollTrigger.refresh();
         setTimeout(() => {
-          //gsap.set(navbar, { mixBlendMode: "difference" });
-
-            gsap.set(blendTargets, {
-            mixBlendMode: "difference",
-          });
+          gsap.set(navbar, { mixBlendMode: "difference" });
         }, 250);
       });
     }
   }, 100);
 
   menuButtonWrapper.addEventListener("click", () => {
-    // const inlineBlendMode = navbar.style.mixBlendMode;
+    const inlineBlendMode = navbar.style.mixBlendMode;
 
     if (lenis.isStopped) {
       lenis.start();
       ScrollTrigger.refresh();
       setTimeout(() => {
-        //gsap.set(navbar, { mixBlendMode: "difference" });
+        gsap.set(navbar, { mixBlendMode: "difference" });
 
-          gsap.set(blendTargets, {
-          mixBlendMode: "difference",
-        });
       }, 250);
     } else {
       lenis.stop();
-      //gsap.set(navbar, { mixBlendMode: "normal" });
-      gsap.set(blendTargets, {
-      mixBlendMode: "normal",
-      });
+      gsap.set(navbar, { mixBlendMode: "normal" });
     }
   });
 
