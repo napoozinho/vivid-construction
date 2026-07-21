@@ -7778,6 +7778,9 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
   const logo = navbar.querySelector("[data-navbar='logo-link']");
   const menu = navbar.querySelector("[data-navbar='menu']").children;
   const button = navbar.querySelector(".navbar-button_component");
+  
+  const blendTargets = [logo, ...menu];
+  
   const menuButtonWrapper = navbar.querySelector(
     "[data-navbar='menu-button']"
   ).parentElement;
@@ -7789,8 +7792,19 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
   );
   if (blendModeSections.length) {
     const navbarHeight = navbar.offsetHeight;
-    const setNormal = () => gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
-    const setDifference = () => gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
+    //const setNormal = () => gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
+    //const setDifference = () => gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
+    const setNormal = () =>
+  gsapWithCSS.set(blendTargets, {
+    mixBlendMode: "normal"
+  });
+
+const setDifference = () =>
+  gsapWithCSS.set(blendTargets, {
+    mixBlendMode: "difference"
+  });
+
+    
     blendModeSections.forEach((section) => {
       ScrollTrigger.create({
         trigger: section,
@@ -7812,7 +7826,10 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
         lenis.start();
         ScrollTrigger.refresh();
         setTimeout(() => {
-          gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
+          //gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
+          gsapWithCSS.set(blendTargets, {
+          mixBlendMode: "difference"
+          });
         }, 250);
       });
     }
@@ -7822,11 +7839,17 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
       lenis.start();
       ScrollTrigger.refresh();
       setTimeout(() => {
-        gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
+        //gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
+        gsapWithCSS.set(blendTargets, {
+        mixBlendMode: "difference"
+        });
       }, 250);
     } else {
       lenis.stop();
-      gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
+      //gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
+      gsapWithCSS.set(blendTargets, {
+      mixBlendMode: "normal"
+      });
     }
   });
   function animateNavbar(elements) {
