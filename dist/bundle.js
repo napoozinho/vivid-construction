@@ -7801,7 +7801,7 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
 
 const setDifference = () =>
   gsapWithCSS.set(blendTargets, {
-    mixBlendMode: "difference"
+    mixBlendMode: "normal"
   });
 
     
