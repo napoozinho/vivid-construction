@@ -7779,7 +7779,6 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
   const menu = navbar.querySelector("[data-navbar='menu']").children;
   const button = navbar.querySelector(".navbar-button_component");
   
-  const blendTargets = [logo, ...menu];
   
   const menuButtonWrapper = navbar.querySelector(
     "[data-navbar='menu-button']"
