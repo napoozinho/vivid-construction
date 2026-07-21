@@ -7792,17 +7792,9 @@ gsapWithCSS.registerPlugin(ScrollTrigger);
   );
   if (blendModeSections.length) {
     const navbarHeight = navbar.offsetHeight;
-    //const setNormal = () => gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
-    //const setDifference = () => gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
-    const setNormal = () =>
-  gsapWithCSS.set(blendTargets, {
-    mixBlendMode: "normal"
-  });
+    const setNormal = () => gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
+    const setDifference = () => gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
 
-const setDifference = () =>
-  gsapWithCSS.set(blendTargets, {
-    mixBlendMode: "difference"
-  });
 
     
     blendModeSections.forEach((section) => {
@@ -7826,10 +7818,7 @@ const setDifference = () =>
         lenis.start();
         ScrollTrigger.refresh();
         setTimeout(() => {
-          //gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
-          gsapWithCSS.set(blendTargets, {
-          mixBlendMode: "difference"
-          });
+          gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
         }, 250);
       });
     }
@@ -7839,17 +7828,11 @@ const setDifference = () =>
       lenis.start();
       ScrollTrigger.refresh();
       setTimeout(() => {
-        //gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
-        gsapWithCSS.set(blendTargets, {
-        mixBlendMode: "difference"
-        });
+        gsapWithCSS.set(navbar, { mixBlendMode: "difference" });
       }, 250);
     } else {
       lenis.stop();
-      //gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
-      gsapWithCSS.set(blendTargets, {
-      mixBlendMode: "normal"
-      });
+      gsapWithCSS.set(navbar, { mixBlendMode: "normal" });
     }
   });
   function animateNavbar(elements) {
